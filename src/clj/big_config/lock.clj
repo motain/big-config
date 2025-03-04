@@ -77,7 +77,7 @@
         opts))))
 
 (defn ^:export acquire [opts]
-  {:pre [(s/valid? ::bs/config-with-owner opts)]}
+  {:pre [(s/valid? ::bs/acquire opts)]}
   (loop [step :generate-lock-id
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)]
@@ -100,7 +100,7 @@
         :check-tag (check-tag opts)))))
 
 (defn ^:export release [opts]
-  {:pre [(s/valid? ::bs/config-with-owner opts)]}
+  {:pre [(s/valid? ::bs/release opts)]}
   (loop [step :generate-lock-id
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)]

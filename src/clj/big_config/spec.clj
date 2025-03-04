@@ -5,5 +5,6 @@
 (s/def ::fn string?)
 (s/def ::owner string?)
 
-(s/def ::config (s/keys :req-un [::ns ::fn]))
-(s/def ::config-with-owner (s/keys :req-un [::ns ::owner]))
+(s/def ::create  (s/keys :req-un [::ns ::fn]))
+(s/def ::acquire (s/keys :req-un [::ns ::owner]))
+(s/def ::release (s/keys :req-un [::ns]))

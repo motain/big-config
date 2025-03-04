@@ -15,8 +15,8 @@
       (flush))
     res))
 
-(defn ^:export create-tf-json [args]
-  {:pre [(s/valid? ::bs/config args)]}
+(defn ^:export create [args]
+  {:pre [(s/valid? ::bs/create args)]}
   (let [{:keys [fn ns]} args]
     (-> (ns-resolve (find-ns (symbol ns)) (symbol fn))
         (apply (vector args))
@@ -25,7 +25,7 @@
 
 (comment
   (alter-var-root #'env (constantly :test))
-  (create-tf-json {:aws-account-id "251213589273"
-                   :region "eu-west-1"
-                   :ns "tofu.module-a.main"
-                   :fn "invoke"}))
+  (create {:aws-account-id "251213589273"
+           :region "eu-west-1"
+           :ns "tofu.module-a.main"
+           :fn "invoke"}))

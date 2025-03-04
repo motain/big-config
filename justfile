@@ -3,8 +3,8 @@ help:
 
 # generate the main.tf.json
 [group('tofu')]
-create-tf-json aws-account-id region ns fn:
-    clj -X:dev big-config.main/create-tf-json \
+create aws-account-id region ns fn:
+    clj -X:dev big-config.main/create \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
