@@ -29,11 +29,16 @@
         :upstream-name (as-> (upstream-name opts :upstream-name) $
                          (recur-with-no-error :prev-revision $))
         :prev-revision (as-> (get-revision opts "HEAD~1" :prev-revision) $
-                         (recur-with-no-error :origin-revision $))
+                         (recur-with-no-error :current-revision $))
+        :current-revision (as-> (get-revision opts "HEAD" :current-revision) $
+                            (recur-with-no-error :origin-revision $))
         :origin-revision (as-> (:upstream-name opts) $
                            (get-revision opts $ :origin-revision)
                            (recur-with-no-error :compare-revisions $))
-        :compare-revisions (let [{:keys [prev-revision origin-revision]} opts]
-                             (if (= prev-revision origin-revision)
+        :compare-revisions (let [{:keys [prev-revision
+                                         current-revision
+                                         origin-revision]} opts]
+                             (if (or (= prev-revision origin-revision)
+                                     (= current-revision origin-revision))
                                (exit-with-code? 0 opts)
                                (exit-with-code? 1 opts)))))))
