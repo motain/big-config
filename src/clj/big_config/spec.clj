@@ -1,4 +1,4 @@
-(ns big-spec
+(ns big-config.spec
   (:require [clojure.spec.alpha :as s]))
 
 (s/def ::aws-account-id string?)

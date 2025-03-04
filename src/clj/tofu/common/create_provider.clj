@@ -1,4 +1,4 @@
-(ns common.create-provider)
+(ns tofu.common.create-provider)
 
 (defn ^:export invoke [opts]
   (let [{:keys [region

@@ -1,9 +1,9 @@
 {
   "provider" : {
     "aws" : [ {
+      "allowed_account_ids" : [ "251213589273" ],
       "profile" : "251213589273",
-      "region" : "eu-west-1",
-      "allowed_account_ids" : [ "251213589273" ]
+      "region" : "eu-west-1"
     } ]
   },
   "resource" : {

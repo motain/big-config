@@ -1,9 +1,9 @@
-(ns module-a.main
+(ns tofu.module-a.main
   (:require
-   [big-config :as bc]
+   [big-config.utils :as bc]
    [clojure.string :as str]
-   [common.create-provider :as create-provider]
-   [module-a.create-sqs :as create-sqs]))
+   [tofu.common.create-provider :as create-provider]
+   [tofu.module-a.create-sqs :as create-sqs]))
 
 (defn ^:export invoke [opts]
   {:post [(as-> % $

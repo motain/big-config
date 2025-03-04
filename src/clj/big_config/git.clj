@@ -1,6 +1,6 @@
-(ns git
+(ns big-config.git
   (:require
-   [utils :refer [exit-with-code? generic-cmd recur-with-no-error]]))
+   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]

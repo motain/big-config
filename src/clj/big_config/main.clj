@@ -1,9 +1,9 @@
-(ns tofu
+(ns big-config.main
   (:require
-   [big-spec :as bs]
+   [big-config.spec :as bs]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]
-   [module-a.main]))
+   [tofu.module-a.main]))
 
 (def env :prod)
 
@@ -18,7 +18,7 @@
 (defn ^:export create-tf-json [args]
   {:pre [(s/valid? ::bs/config args)]}
   (let [{:keys [module]} args]
-    (-> (symbol (str module ".main/invoke"))
+    (-> (symbol (format "tofu.%s.main/invoke" module))
         resolve
         (apply (vector args))
         (json/generate-string {:pretty true})

@@ -1,14 +1,14 @@
-(ns lock
+(ns big-config.lock
   (:require
+   [big-config.spec :as bs]
    [babashka.process :as process]
-   [big-spec :as bs]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
-   [utils :refer [exit-with-code? generic-cmd handle-last-cmd recur-with-error
-                  recur-with-no-error]]))
+   [big-config.utils :refer [exit-with-code? generic-cmd handle-last-cmd recur-with-error
+                             recur-with-no-error]]))
 
 (defn get-config [opts]
   (let [lock-name (-> opts

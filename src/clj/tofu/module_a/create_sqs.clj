@@ -1,4 +1,4 @@
-(ns module-a.create-sqs)
+(ns tofu.module-a.create-sqs)
 
 (defn invoke [opts]
   (let [{:keys [name]} opts]

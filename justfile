@@ -4,7 +4,7 @@ help:
 # generate the main.tf.json
 [group('tofu')]
 create-tf-json aws-account-id region module:
-    clj -X tofu/create-tf-json \
+    clj -X big-config.main/create-tf-json \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :module \"{{ module }}\" > tofu/{{ aws-account-id }}/{{ region }}/{{ module }}/main.tf.json
@@ -30,12 +30,12 @@ plan aws-account-id region module:
 # tofu git check
 [group('tofu')]
 git-check:
-    clj -X git/check
+    clj -X big-config.git/check
 
 # tofu acquire lock
 [group('tofu')]
 lock-acquire aws-account-id region module owner:
-    clj -X lock/acquire \
+    clj -X big-config.lock/acquire \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :module \"{{ module }}\" \
@@ -44,7 +44,7 @@ lock-acquire aws-account-id region module owner:
 # tofu release lock
 [group('tofu')]
 lock-release aws-account-id region module:
-    clj -X lock/release \
+    clj -X big-config.lock/release \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :module \"{{ module }}\"
