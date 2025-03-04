@@ -9,9 +9,9 @@
 
 (alter-var-root #'s/*explain-out* (constantly expound/printer))
 
-(repl/set-refresh-dirs "src/clj")
+(repl/set-refresh-dirs "src/clj" "env/dev/clj")
 
-(def debug-atom (atom []))
+(defonce debug-atom (atom []))
 (defn add-to-debug [x]
   (swap! debug-atom conj x))
 (add-tap add-to-debug)

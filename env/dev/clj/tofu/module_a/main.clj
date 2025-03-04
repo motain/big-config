@@ -27,6 +27,5 @@
 
 (comment
   (-> {:aws-account-id "251213589273"
-       :region "eu-west-1"
-       :module "module-a"}
+       :region "eu-west-1"}
       invoke))

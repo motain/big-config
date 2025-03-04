@@ -10,9 +10,8 @@
    [big-config.utils :refer [exit-with-code? generic-cmd handle-last-cmd recur-with-error
                              recur-with-no-error]]))
 
-(defn get-config [opts]
+(defn generate-lock-id [opts]
   (let [lock-name (-> opts
-                      (select-keys [:aws-account-id :region :module])
                       pr-str
                       hash/sha256
                       codecs/bytes->hex
@@ -27,12 +26,12 @@
 
 (defn create-tag [opts]
   (let [{:keys [aws-account-id
-                module
+                ns
                 owner
                 lock-name]} opts
         res (-> (process/shell {:continue true
                                 :in (pr-str {:aws-account-id aws-account-id
-                                             :module module
+                                             :ns ns
                                              :owner owner})
                                 :out :string
                                 :err :string} (format "git tag -a %s -F -" lock-name)))]
@@ -79,11 +78,11 @@
 
 (defn ^:export acquire [opts]
   {:pre [(s/valid? ::bs/config-with-owner opts)]}
-  (loop [step :get-config
+  (loop [step :generate-lock-id
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)]
       (case step
-        :get-config (recur :delete-tag (get-config opts))
+        :generate-lock-id (recur :delete-tag (generate-lock-id opts))
         :delete-tag (recur :create-tag (delete-tag opts))
         :create-tag (as-> (create-tag opts) $
                       (recur-with-no-error :push-tag $))
@@ -102,11 +101,11 @@
 
 (defn ^:export release [opts]
   {:pre [(s/valid? ::bs/config opts)]}
-  (loop [step :get-config
+  (loop [step :generate-lock-id
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)]
       (case step
-        :get-config (recur :delete-tag (get-config opts))
+        :generate-lock-id (recur :delete-tag (generate-lock-id opts))
         :delete-tag (recur :delete-remote-tag (delete-tag opts))
         :delete-remote-tag (do (delete-remote-tag opts)
                                (println "Success"))))))
