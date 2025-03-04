@@ -1,14 +1,13 @@
 (ns lock
   (:require
-   [big-spec :as bs]
    [babashka.process :as process]
+   [big-spec :as bs]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
    [clojure.spec.alpha :as s]
-   [clojure.string :as str]))
-
-(def env :prod)
+   [clojure.string :as str]
+   [utils :refer [exit-with-code? handle-last-cmd recur-with-error recur-with-no-error]]))
 
 (defn get-config [opts]
   (let [lock-name (-> opts
@@ -71,12 +70,6 @@
         (assoc :tag-content (:out res))
         (update :cmd-results (fnil conj []) res))))
 
-(defn exit-with-code? [n]
-  (when (= env :prod)
-    (shutdown-agents)
-    (flush)
-    (System/exit n)))
-
 (defn parse-tag-content [tag-content]
   (->> tag-content
        str/split-lines
@@ -92,16 +85,12 @@
     (if ownership
       (do
         (println "Success")
-        (exit-with-code? 0)
+        (exit-with-code? 0 opts)
         opts)
       (do
         (println "Different owner")
-        (exit-with-code? 1)
+        (exit-with-code? 1 opts)
         opts))))
-
-(defn handle-last-cmd [opts]
-  (let [{:keys [cmd-results]} opts]
-    (last cmd-results)))
 
 (defn ^:export acquire [opts]
   {:pre [(s/valid? ::bs/config-with-owner opts)]}
@@ -112,21 +101,9 @@
         :get-config (recur :delete-tag (get-config opts))
         :delete-tag (recur :create-tag (delete-tag opts))
         :create-tag (as-> (create-tag opts) $
-                      (let [{:keys [exit err]} (handle-last-cmd $)]
-                        (if (= exit 0)
-                          (recur :push-tag $)
-                          (do
-                            (println err)
-                            (exit-with-code? 1)
-                            opts))))
+                      (recur-with-no-error :push-tag $))
         :push-tag (as-> (push-tag opts) $
-                    (let [{:keys [exit]} (handle-last-cmd $)]
-                      (if (= exit 0)
-                        (do
-                          (println "Success")
-                          (exit-with-code? 0)
-                          opts)
-                        (recur :get-remote-tag $))))
+                    (recur-with-error :get-remote-tag $))
         :get-remote-tag (as-> (-> opts
                                   delete-tag
                                   get-remote-tag) $
@@ -135,13 +112,7 @@
                               (recur :read-tag $)
                               (recur :delete-tag $))))
         :read-tag (as-> (read-tag opts) $
-                    (let [{:keys [exit err]} (handle-last-cmd $)]
-                      (if (= exit 0)
-                        (recur :check-tag $)
-                        (do
-                          (println err)
-                          (exit-with-code? 1)
-                          opts))))
+                    (recur-with-no-error :check-tag $))
         :check-tag (check-tag opts)))))
 
 (defn ^:export release [opts]
@@ -154,6 +125,3 @@
         :delete-tag (recur :delete-remote-tag (delete-tag opts))
         :delete-remote-tag (do (delete-remote-tag opts)
                                (println "Success"))))))
-
-(comment
-  (alter-var-root #'env (constantly :test)))
