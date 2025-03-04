@@ -44,11 +44,12 @@ lock-acquire aws-account-id region ns owner:
 
 # tofu release lock
 [group('tofu')]
-lock-release aws-account-id region ns:
+lock-release aws-account-id region ns owner:
     clj -X big-config.lock/release \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
-      :ns \"{{ ns }}\"
+      :ns \"{{ ns }}\" \
+      :owner \"{{ owner }}\"
 
 # tofu apply
 [group('tofu')]
@@ -58,7 +59,7 @@ apply aws-account-id region ns owner:
     -cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
     direnv exec . tofu apply
     git push
-    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }}
+    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
 
 # tofu destroy
 [group('tofu')]
@@ -66,4 +67,4 @@ destroy aws-account-id region ns owner:
     just -f {{ justfile() }} lock-acquire {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
     -cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
     direnv exec . tofu destroy
-    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }}
+    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}

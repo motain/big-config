@@ -18,21 +18,19 @@
                       str/upper-case
                       (subs 0 4)
                       (as-> $ (str "LOCK-" $)))]
-    (assoc opts :lock-name lock-name)))
+    (-> opts
+        (assoc :lock-details (dissoc opts :steps))
+        (assoc :lock-name lock-name))))
 
 (defn delete-tag [opts]
   (let [{:keys [lock-name]} opts]
     (generic-cmd opts (format "git tag -d %s" lock-name))))
 
 (defn create-tag [opts]
-  (let [{:keys [aws-account-id
-                ns
-                owner
-                lock-name]} opts
+  (let [{:keys [lock-name
+                lock-details]} opts
         res (-> (process/shell {:continue true
-                                :in (pr-str {:aws-account-id aws-account-id
-                                             :ns ns
-                                             :owner owner})
+                                :in (pr-str lock-details)
                                 :out :string
                                 :err :string} (format "git tag -a %s -F -" lock-name)))]
     (update opts :cmd-results (fnil conj []) res)))
