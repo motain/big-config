@@ -1,4 +1,7 @@
-(ns utils)
+(ns utils
+  (:require
+   [babashka.process :as process]
+   [clojure.string :as str]))
 
 (def env :prod)
 
@@ -37,6 +40,21 @@
          (println "Success")
          (exit-with-code? 0 ~opts))
        (recur ~key ~opts))))
+
+(def default-opts {:continue true
+                   :out :string
+                   :err :string})
+
+(defn generic-cmd
+  ([opts cmd]
+   (let [res (process/shell default-opts cmd)]
+     (update opts :cmd-results (fnil conj []) res)))
+  ([opts cmd key]
+   (let [res (process/shell default-opts cmd)]
+     (-> opts
+         (assoc key (-> (:out res)
+                        str/trim-newline))
+         (update :cmd-results (fnil conj []) res)))))
 
 (comment
   (alter-var-root #'env (constantly :test)))

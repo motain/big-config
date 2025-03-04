@@ -1,23 +1,6 @@
 (ns git
   (:require
-   [babashka.process :as process]
-   [clojure.string :as str]
-   [utils :refer [exit-with-code? recur-with-no-error]]))
-
-(def default-opts {:continue true
-                   :out :string
-                   :err :string})
-
-(defn generic-cmd
-  ([opts cmd]
-   (let [res (process/shell default-opts cmd)]
-     (update opts :cmd-results (fnil conj []) res)))
-  ([opts cmd key]
-   (let [res (process/shell default-opts cmd)]
-     (-> opts
-         (assoc key (-> (:out res)
-                        str/trim-newline))
-         (update :cmd-results (fnil conj []) res)))))
+   [utils :refer [exit-with-code? generic-cmd recur-with-no-error]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]

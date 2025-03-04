@@ -7,7 +7,8 @@
    [clojure.edn :as edn]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
-   [utils :refer [exit-with-code? handle-last-cmd recur-with-error recur-with-no-error]]))
+   [utils :refer [exit-with-code? generic-cmd handle-last-cmd recur-with-error
+                  recur-with-no-error]]))
 
 (defn get-config [opts]
   (let [lock-name (-> opts
@@ -21,11 +22,8 @@
     (assoc opts :lock-name lock-name)))
 
 (defn delete-tag [opts]
-  (let [{:keys [lock-name]} opts
-        res (-> (process/shell {:continue true
-                                :out :string
-                                :err :string} (format "git tag -d %s" lock-name)))]
-    (update opts :cmd-results (fnil conj []) res)))
+  (let [{:keys [lock-name]} opts]
+    (generic-cmd opts (format "git tag -d %s" lock-name))))
 
 (defn create-tag [opts]
   (let [{:keys [aws-account-id
@@ -41,34 +39,21 @@
     (update opts :cmd-results (fnil conj []) res)))
 
 (defn push-tag [opts]
-  (let [{:keys [lock-name]} opts
-        res (-> (process/shell {:continue true
-                                :out :string
-                                :err :string} (format "git push origin %s" lock-name)))]
-    (update opts :cmd-results (fnil conj []) res)))
+  (let [{:keys [lock-name]} opts]
+    (generic-cmd opts (format "git push origin %s" lock-name))))
 
 (defn delete-remote-tag [opts]
-  (let [{:keys [lock-name]} opts
-        res (process/shell {:continue true
-                            :out :string
-                            :err :string} (format "git push --delete origin %s" lock-name))]
-    (update opts :cmd-results (fnil conj []) res)))
+  (let [{:keys [lock-name]} opts]
+    (generic-cmd opts (format "git push --delete origin %s" lock-name))))
 
 (defn get-remote-tag [opts]
-  (let [{:keys [lock-name]} opts
-        res (-> (process/shell {:continue true
-                                :out :string
-                                :err :string} (format "git fetch origin tag %s --no-tags" lock-name)))]
-    (update opts :cmd-results (fnil conj []) res)))
+  (let [{:keys [lock-name]} opts]
+    (generic-cmd opts (format "git fetch origin tag %s --no-tags" lock-name))))
 
 (defn read-tag [opts]
   (let [{:keys [lock-name]} opts
-        res (-> (process/shell {:continue true
-                                :out :string
-                                :err :string} (format "git cat-file -p %s" lock-name)))]
-    (-> opts
-        (assoc :tag-content (:out res))
-        (update :cmd-results (fnil conj []) res))))
+        cmd (format "git cat-file -p %s" lock-name)]
+    (generic-cmd opts cmd :tag-content)))
 
 (defn parse-tag-content [tag-content]
   (->> tag-content
