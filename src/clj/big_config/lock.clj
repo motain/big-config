@@ -100,7 +100,7 @@
         :check-tag (check-tag opts)))))
 
 (defn ^:export release [opts]
-  {:pre [(s/valid? ::bs/config opts)]}
+  {:pre [(s/valid? ::bs/config-with-owner opts)]}
   (loop [step :generate-lock-id
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)]
