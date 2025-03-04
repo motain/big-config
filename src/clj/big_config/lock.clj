@@ -67,12 +67,10 @@
     (if ownership
       (do
         (println "Success")
-        (exit-with-code? 0 opts)
-        opts)
+        (exit-with-code? 0 opts))
       (do
         (println "Different owner")
-        (exit-with-code? 1 opts)
-        opts))))
+        (exit-with-code? 1 opts)))))
 
 (defn ^:export acquire [opts]
   {:pre [(s/valid? ::bs/acquire opts)]}
