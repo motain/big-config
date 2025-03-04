@@ -27,6 +27,11 @@ plan aws-account-id region module:
     cd tofu/{{ aws-account-id }}/{{ region }}/{{ module }} && \
     direnv exec . tofu plan
 
+# tofu git check
+[group('tofu')]
+git-check:
+    clj -X git/check
+
 # tofu acquire lock
 [group('tofu')]
 lock-acquire aws-account-id region module owner:
@@ -48,8 +53,10 @@ lock-release aws-account-id region module:
 [group('tofu')]
 apply aws-account-id region module owner:
     just -f {{ justfile() }} lock-acquire {{ aws-account-id }} {{ region }} {{ module }} {{ owner }}
+    just -f {{ justfile() }} git-check
     -cd tofu/{{ aws-account-id }}/{{ region }}/{{ module }} && \
     direnv exec . tofu apply
+    git push
     just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ module }}
 
 # tofu destroy

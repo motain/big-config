@@ -112,7 +112,7 @@
         :get-config (recur :delete-tag (get-config opts))
         :delete-tag (recur :create-tag (delete-tag opts))
         :create-tag (as-> (create-tag opts) $
-                      (let [{:keys [exit err cmd]} (handle-last-cmd $)]
+                      (let [{:keys [exit err]} (handle-last-cmd $)]
                         (if (= exit 0)
                           (recur :push-tag $)
                           (do
@@ -120,7 +120,7 @@
                             (exit-with-code? 1)
                             opts))))
         :push-tag (as-> (push-tag opts) $
-                    (let [{:keys [exit err cmd]} (handle-last-cmd $)]
+                    (let [{:keys [exit]} (handle-last-cmd $)]
                       (if (= exit 0)
                         (do
                           (println "Success")
@@ -130,12 +130,12 @@
         :get-remote-tag (as-> (-> opts
                                   delete-tag
                                   get-remote-tag) $
-                          (let [{:keys [exit err cmd]} (handle-last-cmd $)]
+                          (let [{:keys [exit]} (handle-last-cmd $)]
                             (if (= exit 0)
                               (recur :read-tag $)
                               (recur :delete-tag $))))
         :read-tag (as-> (read-tag opts) $
-                    (let [{:keys [exit err cmd]} (handle-last-cmd $)]
+                    (let [{:keys [exit err]} (handle-last-cmd $)]
                       (if (= exit 0)
                         (recur :check-tag $)
                         (do
