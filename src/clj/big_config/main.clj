@@ -2,8 +2,7 @@
   (:require
    [big-config.spec :as bs]
    [cheshire.core :as json]
-   [clojure.spec.alpha :as s]
-   [tofu.module-a.main]))
+   [clojure.spec.alpha :as s]))
 
 (def env :prod)
 
@@ -18,7 +17,9 @@
 (defn ^:export create [args]
   {:pre [(s/valid? ::bs/create args)]}
   (let [{:keys [fn ns]} args]
-    (-> (ns-resolve (find-ns (symbol ns)) (symbol fn))
+    (-> (format "%s/%s" ns fn)
+        (symbol)
+        requiring-resolve
         (apply (vector args))
         (json/generate-string {:pretty true})
         print-and-flush)))
