@@ -60,7 +60,7 @@ apply aws-account-id region ns owner:
       :ns \"{{ ns }}\" \
       :owner \"{{ owner }}\" \
       :lock-keys '[:aws-account-id :region :ns :owner]' \
-      :tofu-apply-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply -auto-approve'\""
+      :tofu-apply-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply'\""
 
 
 # tofu destroy

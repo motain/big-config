@@ -1,5 +1,6 @@
 (ns big-config.main
   (:require
+   [babashka.process :as process]
    [big-config.env :refer [env]]
    [big-config.git :as git]
    [big-config.lock :as lock]
@@ -27,13 +28,15 @@
         print-and-flush)))
 
 (defn run-tofu-apply [opts]
-  (let [{:keys [tofu-apply-cmd]} opts]
-    (utils/generic-cmd opts tofu-apply-cmd)))
+  (let [{:keys [tofu-apply-cmd]} opts
+        res (process/shell tofu-apply-cmd)]
+    (update opts :cmd-results (fnil conj []) res)))
 
 (defn git-push [opts]
   (utils/generic-cmd opts "git push"))
 
 (defn ^:export tofu-apply [opts]
+  #_{:clj-kondo/ignore [:loop-without-recur]}
   (loop [step :lock-acquire
          opts opts]
     (println (starting-step step))
@@ -62,19 +65,4 @@
               :fn "invoke"
               :owner "ALBERTO_MACOS"
               :lock-keys [:aws-account-id :region :ns :owner]
-              :tofu-apply-cmd "bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply -auto-approve'"}]
-    (loop [step :lock-acquire
-           opts opts]
-      (println (starting-step step))
-      (let [opts (update opts :steps (fnil conj []) step)
-            error-msg (step-failed step)]
-        (case step
-          :lock-acquire (as-> (lock/acquire opts) $
-                          (utils/recur-with-no-error :git-check $))
-          :git-check (as-> (git/check opts) $
-                       (utils/recur-with-no-error :run-tofu-apply $))
-          :run-tofu-apply (as-> (run-tofu-apply opts) $
-                            (utils/recur-with-no-error :git-push $ error-msg))
-          :git-push (as-> (git-push opts) $
-                      (utils/recur-with-no-error :lock-release $ error-msg))
-          :lock-release (lock/release opts))))))
+              :tofu-apply-cmd "bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply -auto-approve'"}] opts))

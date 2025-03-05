@@ -8,7 +8,6 @@
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
-   [clojure.pprint :as pp]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]))
 
@@ -77,7 +76,6 @@
   {:pre [(s/valid? ::bs/acquire opts)]}
   (loop [step :generate-lock-id
          opts opts]
-    (utils/starting-step step)
     (let [opts (update opts :steps (fnil conj []) step)]
       (case step
         :generate-lock-id (recur :delete-tag (generate-lock-id opts))

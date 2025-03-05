@@ -1,8 +1,7 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error]]
-   [big-config.utils :as utils]
-   [clojure.pprint :as pp]))
+   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error
+                             step-failed]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -22,9 +21,8 @@
   #_{:clj-kondo/ignore [:loop-without-recur]}
   (loop [step :git-diff
          opts opts]
-    (utils/starting-step step)
     (let [opts (update opts :steps (fnil conj []) step)
-          error-msg (utils/step-failed step)]
+          error-msg (step-failed step)]
       (case step
         :git-diff (as-> (git-diff opts) $
                     (recur-with-no-error :fetch-origin $ error-msg))
