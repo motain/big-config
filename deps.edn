@@ -5,8 +5,8 @@
            babashka/process       {:mvn/version "0.5.22"}
            buddy/buddy-core       {:mvn/version "1.12.0-430"}
            cheshire/cheshire      {:mvn/version "5.13.0"}
-           com.bunimo/clansi      {:git/url "https://github.com/lgouger/clansi.git"
-                                   :git/sha "cb9b5b4e739237aec2614060648b33e3b9b89f16"}}
+           com.bunimo/clansi      {:git/url "https://github.com/amiorin/clansi.git"
+                                   :git/sha "94084e3cfb4ca7cf443478fe4ee1a97ae3acceb9"}}
 
  :aliases {:build {:deps       {io.github.clojure/tools.build       {:mvn/version "0.9.6"}}
                    :ns-default build}
