@@ -74,7 +74,7 @@
     (vector? m) (mapv nested-sort-map m)
     :else m))
 
-(defn starting-step [step]
+(defn description-for-step [step]
   (let [messages {:check-tag "check-tag"
                   :git-push "Pushing the changes to git"
                   :git-diff "git-diff"
@@ -86,7 +86,7 @@
                   :generate-lock-id "generate-lock-id"
                   :push-tag "push-tag"
                   :current-revision "current-revision"
-                  :run-tofu-apply "Applying the changes"
+                  :run-cmd "Running the command with the lock"
                   :origin-revision "origin-revision"
                   :fetch-origin "fetch-origin"
                   :delete-tag "delete-tag"
@@ -99,7 +99,7 @@
       (get messages $)
       (clansi/style $ :green))))
 
-(defn step-failed [step]
+(defn error-for-step [step]
   (let [messages {:check-tag "check-tag"
                   :git-push "Pushing the changes to git"
                   :git-diff "The working directory is not clean"
@@ -111,7 +111,7 @@
                   :generate-lock-id "generate-lock-id"
                   :push-tag "push-tag"
                   :current-revision "current-revision"
-                  :run-tofu-apply "Applying the changes"
+                  :run-cmd "The command executed with the lock failed"
                   :origin-revision "origin-revision"
                   :fetch-origin "fetch-origin"
                   :delete-tag "delete-tag"

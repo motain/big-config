@@ -5,7 +5,7 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :as utils :refer [starting-step step-failed]]
+   [big-config.utils :as utils :refer [description-for-step error-for-step]]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]))
 
@@ -27,28 +27,28 @@
         (json/generate-string {:pretty true})
         print-and-flush)))
 
-(defn run-tofu-apply [opts]
-  (let [{:keys [tofu-apply-cmd]} opts
-        res (process/shell tofu-apply-cmd)]
+(defn run-cmd [opts]
+  (let [{:keys [run-cmd]} opts
+        res (process/shell {:continue true} run-cmd)]
     (update opts :cmd-results (fnil conj []) res)))
 
 (defn git-push [opts]
   (utils/generic-cmd opts "git push"))
 
-(defn ^:export tofu-apply [opts]
+(defn ^:export run-with-lock [opts]
   #_{:clj-kondo/ignore [:loop-without-recur]}
   (loop [step :lock-acquire
          opts opts]
-    (println (starting-step step))
+    (println (description-for-step step))
     (let [opts (update opts :steps (fnil conj []) step)
-          error-msg (step-failed step)]
+          error-msg (error-for-step step)]
       (case step
         :lock-acquire (as-> (lock/acquire opts) $
                         (utils/recur-with-no-error :git-check $))
         :git-check (as-> (git/check opts) $
-                     (utils/recur-with-no-error :run-tofu-apply $))
-        :run-tofu-apply (as-> (run-tofu-apply opts) $
-                          (utils/recur-with-no-error :git-push $ error-msg))
+                     (utils/recur-with-no-error :run-cmd $))
+        :run-cmd (as-> (run-cmd opts) $
+                   (utils/recur-with-no-error :git-push $ error-msg))
         :git-push (as-> (git-push opts) $
                     (utils/recur-with-no-error :lock-release $ error-msg))
         :lock-release (lock/release opts)))))
@@ -65,4 +65,4 @@
               :fn "invoke"
               :owner "ALBERTO_MACOS"
               :lock-keys [:aws-account-id :region :ns :owner]
-              :tofu-apply-cmd "bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply -auto-approve'"}] opts))
+              :run-cmd "true"}] opts))

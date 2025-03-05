@@ -1,7 +1,7 @@
 (ns big-config.git
   (:require
    [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error
-                             step-failed]]))
+                             error-for-step]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -22,7 +22,7 @@
   (loop [step :git-diff
          opts opts]
     (let [opts (update opts :steps (fnil conj []) step)
-          error-msg (step-failed step)]
+          error-msg (error-for-step step)]
       (case step
         :git-diff (as-> (git-diff opts) $
                     (recur-with-no-error :fetch-origin $ error-msg))
