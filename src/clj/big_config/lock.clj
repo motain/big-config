@@ -1,17 +1,22 @@
 (ns big-config.lock
   (:require
-   [big-config.spec :as bs]
    [babashka.process :as process]
+   [big-config.spec :as bs]
+   [big-config.utils :as utils :refer [exit-with-code? generic-cmd
+                                       handle-last-cmd nested-sort-map
+                                       recur-with-error recur-with-no-error]]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
+   [clojure.pprint :as pp]
    [clojure.spec.alpha :as s]
-   [clojure.string :as str]
-   [big-config.utils :refer [exit-with-code? generic-cmd handle-last-cmd recur-with-error
-                             recur-with-no-error]]))
+   [clojure.string :as str]))
 
 (defn generate-lock-id [opts]
-  (let [lock-name (-> opts
+  (let [{:keys [lock-keys]} opts
+        lock-details (select-keys opts lock-keys)
+        lock-name (-> lock-details
+                      nested-sort-map
                       pr-str
                       hash/sha256
                       codecs/bytes->hex
@@ -19,7 +24,7 @@
                       (subs 0 4)
                       (as-> $ (str "LOCK-" $)))]
     (-> opts
-        (assoc :lock-details (dissoc opts :steps))
+        (assoc :lock-details lock-details)
         (assoc :lock-name lock-name))))
 
 (defn delete-tag [opts]
@@ -65,17 +70,14 @@
                             (= (get opts k) v))
                           (parse-tag-content tag-content))]
     (if ownership
-      (do
-        (println "Success")
-        (exit-with-code? 0 opts))
-      (do
-        (println "Different owner")
-        (exit-with-code? 1 opts)))))
+      opts
+      (exit-with-code? 1 opts))))
 
 (defn ^:export acquire [opts]
   {:pre [(s/valid? ::bs/acquire opts)]}
   (loop [step :generate-lock-id
          opts opts]
+    (utils/starting-step step)
     (let [opts (update opts :steps (fnil conj []) step)]
       (case step
         :generate-lock-id (recur :delete-tag (generate-lock-id opts))
@@ -103,5 +105,4 @@
       (case step
         :generate-lock-id (recur :delete-tag (generate-lock-id opts))
         :delete-tag (recur :delete-remote-tag (delete-tag opts))
-        :delete-remote-tag (do (delete-remote-tag opts)
-                               (println "Success"))))))
+        :delete-remote-tag (delete-remote-tag opts)))))

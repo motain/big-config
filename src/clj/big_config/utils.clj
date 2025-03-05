@@ -1,9 +1,9 @@
 (ns big-config.utils
   (:require
    [babashka.process :as process]
-   [clojure.string :as str]))
-
-(def env :prod)
+   [big-config.env :refer [env]]
+   [clojure.string :as str]
+   [com.bunimo.clansi :as clansi]))
 
 (defn exit-with-code? [n opts]
   (when (= env :prod)
@@ -36,9 +36,7 @@
   `(let [proc# (handle-last-cmd ~opts)
          exit# (get proc# :exit)]
      (if (= exit# 0)
-       (do
-         (println "Success")
-         (exit-with-code? 0 ~opts))
+       ~opts
        (recur ~key ~opts))))
 
 (def default-opts {:continue true
@@ -75,6 +73,56 @@
                           :else v)]))
     (vector? m) (mapv nested-sort-map m)
     :else m))
+
+(defn starting-step [step]
+  (let [messages {:check-tag "check-tag"
+                  :git-push "Pushing the changes to git"
+                  :git-diff "git-diff"
+                  :git-check "Checking if there are files not in the index"
+                  :get-remote-tag "get-remote-tag"
+                  :compare-revisions "compare-revisions"
+                  :upstream-name "upstream-name"
+                  :lock-release "Releasing lock"
+                  :generate-lock-id "generate-lock-id"
+                  :push-tag "push-tag"
+                  :current-revision "current-revision"
+                  :run-tofu-apply "Applying the changes"
+                  :origin-revision "origin-revision"
+                  :fetch-origin "fetch-origin"
+                  :delete-tag "delete-tag"
+                  :lock-acquire "Acquiring lock"
+                  :prev-revision "prev-revision"
+                  :read-tag "read-tag"
+                  :create-tag "create-tag"
+                  :delete-remote-tag "delete-remote-tag"}]
+    (as-> step $
+      (get messages $)
+      (clansi/style $ :green))))
+
+(defn step-failed [step]
+  (let [messages {:check-tag "check-tag"
+                  :git-push "Pushing the changes to git"
+                  :git-diff "The working directory is not clean"
+                  :git-check "The working directory is not clean"
+                  :get-remote-tag "get-remote-tag"
+                  :compare-revisions "compare-revisions"
+                  :upstream-name "upstream-name"
+                  :lock-release "Releasing lock"
+                  :generate-lock-id "generate-lock-id"
+                  :push-tag "push-tag"
+                  :current-revision "current-revision"
+                  :run-tofu-apply "Applying the changes"
+                  :origin-revision "origin-revision"
+                  :fetch-origin "fetch-origin"
+                  :delete-tag "delete-tag"
+                  :lock-acquire "Failed to acquiring lock"
+                  :prev-revision "prev-revision"
+                  :read-tag "read-tag"
+                  :create-tag "create-tag"
+                  :delete-remote-tag "delete-remote-tag"}]
+    (as-> step $
+      (get messages $)
+      (clansi/style $ :red))))
 
 (comment
   (alter-var-root #'env (constantly :test)))

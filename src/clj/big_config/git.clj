@@ -1,6 +1,8 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error]]))
+   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error]]
+   [big-config.utils :as utils]
+   [clojure.pprint :as pp]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -16,14 +18,16 @@
 (defn git-diff [opts]
   (generic-cmd opts "git diff --quiet"))
 
-(defn ^:export check [_]
+(defn ^:export check [opts]
   #_{:clj-kondo/ignore [:loop-without-recur]}
   (loop [step :git-diff
-         opts {}]
-    (let [opts (update opts :steps (fnil conj []) step)]
+         opts opts]
+    (utils/starting-step step)
+    (let [opts (update opts :steps (fnil conj []) step)
+          error-msg (utils/step-failed step)]
       (case step
         :git-diff (as-> (git-diff opts) $
-                    (recur-with-no-error :fetch-origin $ "The repo is dirty"))
+                    (recur-with-no-error :fetch-origin $ error-msg))
         :fetch-origin (as-> (fetch-origin opts) $
                         (recur-with-no-error :upstream-name $))
         :upstream-name (as-> (upstream-name opts :upstream-name) $
@@ -40,5 +44,5 @@
                                          origin-revision]} opts]
                              (if (or (= prev-revision origin-revision)
                                      (= current-revision origin-revision))
-                               (exit-with-code? 0 opts)
+                               opts
                                (exit-with-code? 1 opts)))))))

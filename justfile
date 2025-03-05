@@ -45,7 +45,7 @@ lock-acquire aws-account-id region ns owner:
 # tofu release lock
 [group('tofu')]
 lock-release aws-account-id region ns owner:
-    clj -X big-config.lock/release \
+    @clj -X big-config.lock/release \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
@@ -54,12 +54,14 @@ lock-release aws-account-id region ns owner:
 # tofu apply
 [group('tofu')]
 apply aws-account-id region ns owner:
-    just -f {{ justfile() }} lock-acquire {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
-    just -f {{ justfile() }} git-check
-    -cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
-    direnv exec . tofu apply
-    git push
-    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
+    @clj -X big-config.main/tofu-apply \
+      :aws-account-id \"{{ aws-account-id }}\" \
+      :region \"{{ region }}\" \
+      :ns \"{{ ns }}\" \
+      :owner \"{{ owner }}\" \
+      :lock-keys '[:aws-account-id :region :ns :owner]' \
+      :tofu-apply-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply -auto-approve'\""
+
 
 # tofu destroy
 [group('tofu')]
