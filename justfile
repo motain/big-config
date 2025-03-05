@@ -66,7 +66,10 @@ apply aws-account-id region ns owner:
 # tofu destroy
 [group('tofu')]
 destroy aws-account-id region ns owner:
-    just -f {{ justfile() }} lock-acquire {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
-    -cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
-    direnv exec . tofu destroy
-    just -f {{ justfile() }} lock-release {{ aws-account-id }} {{ region }} {{ ns }} {{ owner }}
+    @clj -X big-config.main/run-with-lock \
+      :aws-account-id \"{{ aws-account-id }}\" \
+      :region \"{{ region }}\" \
+      :ns \"{{ ns }}\" \
+      :owner \"{{ owner }}\" \
+      :lock-keys '[:aws-account-id :region :ns :owner]' \
+      :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu destroy'\""
