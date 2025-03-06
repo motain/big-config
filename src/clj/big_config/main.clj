@@ -58,15 +58,20 @@
                                   (recur-ok-or-end :exit $ error-msg))
         :exit opts))))
 
+(defn println-step-fn [step]
+  (when (not= :end step)
+    (println (description-for-step step))))
+
 (defn run-with-lock
   ([opts]
    (run-with-lock opts identity))
   ([opts end-fn]
+   (run-with-lock opts end-fn (fn [_])))
+  ([opts end-fn step-fn]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :lock-acquire
           opts opts]
-     (when (not= :end step)
-       (println (description-for-step step)))
+     (step-fn step)
      (let [opts (update opts :steps (fnil conj []) step)
            error-msg (error-for-step step)]
        (case step
@@ -90,7 +95,7 @@
     (exit-with-code exit)))
 
 (defn ^:export run-with-lock! [opts]
-  (run-with-lock opts exit-end-fn))
+  (run-with-lock opts exit-end-fn println-step-fn))
 
 (comment
   (create {:aws-account-id "251213589273"
