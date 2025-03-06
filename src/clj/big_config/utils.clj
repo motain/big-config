@@ -114,11 +114,14 @@
         proc (process/shell {:continue true} run-cmd)]
     (handle-cmd opts proc)))
 
-(defn exit-end-fn [opts]
-  (let [exit (:exit opts)
-        err (:err opts)]
-    (when-not (= exit 0)
-      (println (style err :red)))
-    (exit-with-code exit)))
+(defn exit-end-fn
+  ([opts]
+   (exit-end-fn nil opts))
+  ([err-msg opts]
+   (let [exit (:exit opts)
+         err (or err-msg (:err opts))]
+     (when-not (= exit 0)
+       (println (style err :red)))
+     (exit-with-code exit))))
 
 (comment)

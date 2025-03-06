@@ -45,8 +45,8 @@ lock-acquire aws-account-id region ns owner:
 
 # tofu release lock
 [group('tofu')]
-lock-release aws-account-id region ns owner:
-    @clj -X big-config.main/release-lock \
+lock-release-any-owner aws-account-id region ns owner:
+    @clj -X big-config.main/release-lock-any-owner \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \

@@ -3,8 +3,9 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [exit-end-fn generic-cmd print-and-flush
-                             println-step-fn recur-ok-or-end run-cmd]]
+   [big-config.utils :refer [description-for-step exit-end-fn generic-cmd
+                             print-and-flush println-step-fn recur-ok-or-end
+                             run-cmd]]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]))
 
@@ -21,9 +22,13 @@
 (defn git-push [opts]
   (generic-cmd opts "git push"))
 
-(defn ^:export acquire-lock [opts])
+(defn ^:export acquire-lock [opts]
+  (println (description-for-step :lock-acquire))
+  (lock/acquire opts (partial exit-end-fn "Failed to acquire the lock")))
 
-(defn ^:export release-lock-any-onwer [opts])
+(defn ^:export release-lock-any-owner [opts]
+  (println (description-for-step :lock-release))
+  (lock/release-any-owner opts (partial exit-end-fn "Failed to release the lock")))
 
 (defn run-with-lock
   ([opts]
