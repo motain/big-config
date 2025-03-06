@@ -1,21 +1,21 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [generic-cmd-v2 recur-ok-or-end
+   [big-config.utils :refer [generic-cmd recur-ok-or-end
                              error-for-step]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]
-    (generic-cmd-v2 opts cmd key)))
+    (generic-cmd opts cmd key)))
 
 (defn fetch-origin [opts]
-  (generic-cmd-v2 opts "git fetch origin"))
+  (generic-cmd opts "git fetch origin"))
 
 (defn upstream-name [opts key]
   (let [cmd "git rev-parse --abbrev-ref @{upstream}"]
-    (generic-cmd-v2 opts cmd key)))
+    (generic-cmd opts cmd key)))
 
 (defn git-diff [opts]
-  (generic-cmd-v2 opts "git diff --quiet"))
+  (generic-cmd opts "git diff --quiet"))
 
 (defn compare-revisions [opts]
   (let [{:keys [prev-revision

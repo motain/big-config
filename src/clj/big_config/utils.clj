@@ -44,7 +44,7 @@
         (update :cmd-results (fnil conj []) res)
         (merge {:exit exit :err err}))))
 
-(defn generic-cmd-v2
+(defn generic-cmd
   ([opts cmd]
    (let [proc (process/shell default-opts cmd)]
      (handle-cmd opts proc)))
@@ -54,17 +54,6 @@
          (assoc key (-> (:out proc)
                         str/trim-newline))
          (handle-cmd proc)))))
-
-(defn generic-cmd
-  ([opts cmd]
-   (let [res (process/shell default-opts cmd)]
-     (update opts :cmd-results (fnil conj []) res)))
-  ([opts cmd key]
-   (let [res (process/shell default-opts cmd)]
-     (-> opts
-         (assoc key (-> (:out res)
-                        str/trim-newline))
-         (update :cmd-results (fnil conj []) res)))))
 
 (defn deep-merge
   "Recursively merges maps."

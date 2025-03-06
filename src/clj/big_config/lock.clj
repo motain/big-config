@@ -1,7 +1,7 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
-   [big-config.utils :as utils :refer [generic-cmd-v2 handle-cmd
+   [big-config.utils :as utils :refer [generic-cmd handle-cmd
                                        nested-sort-map recur-not-ok-or-end
                                        recur-ok-or-end]]
    [buddy.core.codecs :as codecs]
@@ -29,7 +29,7 @@
 
 (defn delete-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd-v2 opts (format "git tag -d %s" lock-name))))
+    (generic-cmd opts (format "git tag -d %s" lock-name))))
 
 (defn create-tag [opts]
   (let [{:keys [lock-name
@@ -42,20 +42,20 @@
 
 (defn push-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd-v2 opts (format "git push origin %s" lock-name))))
+    (generic-cmd opts (format "git push origin %s" lock-name))))
 
 (defn delete-remote-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd-v2 opts (format "git push --delete origin %s" lock-name))))
+    (generic-cmd opts (format "git push --delete origin %s" lock-name))))
 
 (defn get-remote-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd-v2 opts (format "git fetch origin tag %s --no-tags" lock-name))))
+    (generic-cmd opts (format "git fetch origin tag %s --no-tags" lock-name))))
 
 (defn read-tag [opts]
   (let [{:keys [lock-name]} opts
         cmd (format "git cat-file -p %s" lock-name)]
-    (generic-cmd-v2 opts cmd :tag-content)))
+    (generic-cmd opts cmd :tag-content)))
 
 (defn parse-tag-content [tag-content]
   (->> tag-content
