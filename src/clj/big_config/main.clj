@@ -1,19 +1,12 @@
 (ns big-config.main
   (:require
-   [babashka.process :as process]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [description-for-step exit-with-code generic-cmd
-                             handle-cmd recur-ok-or-end]]
+   [big-config.utils :refer [exit-end-fn generic-cmd print-and-flush
+                             println-step-fn recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
-   [clojure.spec.alpha :as s]
-   [com.bunimo.clansi :refer [style]]))
-
-(defn print-and-flush
-  [res]
-  (println res)
-  (flush))
+   [clojure.spec.alpha :as s]))
 
 (defn ^:export create [args]
   {:pre [(s/valid? ::bs/create args)]}
@@ -25,21 +18,12 @@
         (json/generate-string {:pretty true})
         print-and-flush)))
 
-(defn run-cmd [opts]
-  (let [{:keys [run-cmd]} opts
-        proc (process/shell {:continue true} run-cmd)]
-    (handle-cmd opts proc)))
-
 (defn git-push [opts]
   (generic-cmd opts "git push"))
 
 (defn ^:export acquire-lock [opts])
 
 (defn ^:export release-lock-any-onwer [opts])
-
-(defn println-step-fn [step]
-  (when (not= :end step)
-    (println (description-for-step step))))
 
 (defn run-with-lock
   ([opts]
@@ -65,13 +49,6 @@
                          (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
-(defn exit-end-fn [opts]
-  (let [exit (:exit opts)
-        err (:err opts)]
-    (when-not (= exit 0)
-      (println (style err :red)))
-    (exit-with-code exit)))
-
 (defn ^:export run-with-lock! [opts]
   (run-with-lock opts exit-end-fn println-step-fn))
 
@@ -79,18 +56,4 @@
   (create {:aws-account-id "251213589273"
            :region "eu-west-1"
            :ns "tofu.module-a.main"
-           :fn "invoke"})
-  #_{:clj-kondo/ignore [:unused-binding]}
-  (let [opts {:aws-account-id "251213589273"
-              :region "eu-west-1"
-              :ns "tofu.module-a.main"
-              :fn "invoke"
-              :owner "ALBERTO_MACOS"
-              :lock-keys [:aws-account-id :region :ns]
-              :run-cmd "false"}
-        end-fn (fn [{:keys [exit err] :as opts}]
-                 (when (not= exit 0)
-                   (-> err
-                       (style :red)
-                       println))
-                 opts)]))
+           :fn "invoke"}))

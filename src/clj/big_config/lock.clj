@@ -120,13 +120,4 @@
                               (recur :end $))
          :end (end-fn opts))))))
 
-(comment
-  #_{:clj-kondo/ignore [:unused-binding]}
-  (let [opts {:aws-account-id "251213589273"
-              :region "eu-west-1"
-              :ns "tofu.module-a.main"
-              :fn "invoke"
-              :owner "ALBERTO_MACOS"
-              :lock-keys [:aws-account-id :region :ns]
-              :run-cmd "false"}
-        end-fn identity]))
+(comment)

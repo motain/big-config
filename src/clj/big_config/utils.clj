@@ -2,7 +2,7 @@
   (:require
    [babashka.process :as process]
    [clojure.string :as str]
-   [com.bunimo.clansi :as clansi]))
+   [com.bunimo.clansi :as clansi :refer [style]]))
 
 (defn exit-with-code [n]
   (shutdown-agents)
@@ -99,5 +99,26 @@
     (as-> step $
       (get messages $)
       (clansi/style $ :green))))
+
+(defn println-step-fn [step]
+  (when (not= :end step)
+    (println (description-for-step step))))
+
+(defn print-and-flush
+  [res]
+  (println res)
+  (flush))
+
+(defn run-cmd [opts]
+  (let [{:keys [run-cmd]} opts
+        proc (process/shell {:continue true} run-cmd)]
+    (handle-cmd opts proc)))
+
+(defn exit-end-fn [opts]
+  (let [exit (:exit opts)
+        err (:err opts)]
+    (when-not (= exit 0)
+      (println (style err :red)))
+    (exit-with-code exit)))
 
 (comment)

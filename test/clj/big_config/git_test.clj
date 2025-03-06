@@ -3,7 +3,7 @@
             [clojure.test :refer [deftest is testing]]))
 
 (deftest check-test
-  (testing "acquire and release lock"
+  (testing "git check test"
     (let [opts {}
           xs (atom [])
           end-fn (partial swap! xs conj)]
