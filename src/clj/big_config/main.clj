@@ -4,9 +4,8 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [description-for-step error-for-step
-                             exit-with-code generic-cmd handle-cmd
-                             recur-ok-or-end]]
+   [big-config.utils :refer [description-for-step exit-with-code generic-cmd
+                             handle-cmd recur-ok-or-end]]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]
    [com.bunimo.clansi :refer [style]]))
@@ -34,29 +33,9 @@
 (defn git-push [opts]
   (generic-cmd opts "git push"))
 
-(defn ^:export acquire-lock [opts]
-  #_{:clj-kondo/ignore [:loop-without-recur]}
-  (loop [step :lock-acquire
-         opts opts]
-    (println (description-for-step step))
-    (let [opts (update opts :steps (fnil conj []) step)
-          error-msg (error-for-step step)]
-      (case step
-        :lock-acquire (as-> (lock/acquire opts) $
-                        (recur-ok-or-end :exit $ error-msg))
-        :exit opts))))
+(defn ^:export acquire-lock [opts])
 
-(defn ^:export release-lock-any-onwer [opts]
-  #_{:clj-kondo/ignore [:loop-without-recur]}
-  (loop [step :lock-release-any-owner
-         opts opts]
-    (println (description-for-step step))
-    (let [opts (update opts :steps (fnil conj []) step)
-          error-msg (error-for-step step)]
-      (case step
-        :lock-release-any-owner (as-> (lock/release-any-owner opts) $
-                                  (recur-ok-or-end :exit $ error-msg))
-        :exit opts))))
+(defn ^:export release-lock-any-onwer [opts])
 
 (defn println-step-fn [step]
   (when (not= :end step)
@@ -72,19 +51,18 @@
    (loop [step :lock-acquire
           opts opts]
      (step-fn step)
-     (let [opts (update opts :steps (fnil conj []) step)
-           error-msg (error-for-step step)]
+     (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :lock-acquire (as-> (lock/acquire opts) $
-                         (recur-ok-or-end :git-check $))
+                         (recur-ok-or-end :git-check $ "Failed to acquire the lock"))
          :git-check (as-> (git/check opts) $
-                      (recur-ok-or-end :run-cmd $ error-msg))
+                      (recur-ok-or-end :run-cmd $ "The working directory is not clean"))
          :run-cmd (as-> (run-cmd opts) $
-                    (recur-ok-or-end :git-push $ error-msg))
+                    (recur-ok-or-end :git-push $ "The command executed with the lock failed"))
          :git-push (as-> (git-push opts) $
-                     (recur-ok-or-end :lock-release $ error-msg))
+                     (recur-ok-or-end :lock-release $))
          :lock-release (as-> (lock/release-any-owner opts) $
-                         (recur-ok-or-end :end $))
+                         (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
 (defn exit-end-fn [opts]

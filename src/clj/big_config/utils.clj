@@ -100,26 +100,4 @@
       (get messages $)
       (clansi/style $ :green))))
 
-(defn error-for-step [step]
-  (step {:check-tag "check-tag"
-         :compare-revisions "compare-revisions"
-         :create-tag "create-tag"
-         :current-revision "current-revision"
-         :delete-remote-tag "delete-remote-tag"
-         :delete-tag "delete-tag"
-         :fetch-origin "fetch-origin"
-         :generate-lock-id "generate-lock-id"
-         :get-remote-tag "get-remote-tag"
-         :git-push "Pushing the changes to git"
-         :git-diff "The working directory is not clean"
-         :git-check "The working directory is not clean"
-         :lock-acquire "Failed to acquire lock"
-         :lock-release "Releasing lock"
-         :origin-revision "origin-revision"
-         :prev-revision "prev-revision"
-         :push-tag "push-tag"
-         :run-cmd "The command executed with the lock failed"
-         :read-tag "read-tag"
-         :upstream-name "upstream-name"}))
-
 (comment)

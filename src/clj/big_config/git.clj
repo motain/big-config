@@ -1,7 +1,6 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [generic-cmd recur-ok-or-end
-                             error-for-step]]))
+   [big-config.utils :refer [generic-cmd recur-ok-or-end]]))
 
 (defn get-revision [opts revision key]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -35,11 +34,10 @@
   ([opts end-fn]
    (loop [step :git-diff
           opts opts]
-     (let [opts (update opts :steps (fnil conj []) step)
-           error-msg (error-for-step step)]
+     (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :git-diff (as-> (git-diff opts) $
-                     (recur-ok-or-end :fetch-origin $ error-msg))
+                     (recur-ok-or-end :fetch-origin $))
          :fetch-origin (as-> (fetch-origin opts) $
                          (recur-ok-or-end :upstream-name $))
          :upstream-name (as-> (upstream-name opts :upstream-name) $
