@@ -69,12 +69,11 @@
         ownership (every? (fn [[k v]]
                             (= (get opts k) v))
                           (parse-tag-content tag-content))]
-    (-> opts
-        (merge (if ownership
-                 {:exit 0
-                  :err nil}
-                 {:exit 1
-                  :err "Different owner"})))))
+    (merge opts (if ownership
+                  {:exit 0
+                   :err nil}
+                  {:exit 1
+                   :err "Different owner"}))))
 
 (defn acquire
   ([opts]
