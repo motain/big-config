@@ -1,18 +1,16 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
-   [big-config.spec :as bs]
-   [big-config.utils :as utils :refer [exit-with-code? generic-cmd
-                                       handle-last-cmd nested-sort-map
-                                       recur-with-error recur-with-no-error]]
+   [big-config.utils :as utils :refer [generic-cmd-v2 handle-cmd
+                                       nested-sort-map recur-not-ok-or-end
+                                       recur-ok-or-end]]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
-   [clojure.spec.alpha :as s]
    [clojure.string :as str]))
 
 (defn generate-lock-id [opts]
-  (let [{:keys [lock-keys]} opts
+  (let [{:keys [lock-keys owner]} opts
         lock-details (select-keys opts lock-keys)
         lock-name (-> lock-details
                       nested-sort-map
@@ -24,37 +22,40 @@
                       (as-> $ (str "LOCK-" $)))]
     (-> opts
         (assoc :lock-details lock-details)
-        (assoc :lock-name lock-name))))
+        (update :lock-details assoc :owner owner)
+        (merge {:lock-name lock-name
+                :exit 0
+                :err nil}))))
 
 (defn delete-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd opts (format "git tag -d %s" lock-name))))
+    (generic-cmd-v2 opts (format "git tag -d %s" lock-name))))
 
 (defn create-tag [opts]
   (let [{:keys [lock-name
                 lock-details]} opts
-        res (-> (process/shell {:continue true
-                                :in (pr-str lock-details)
-                                :out :string
-                                :err :string} (format "git tag -a %s -F -" lock-name)))]
-    (update opts :cmd-results (fnil conj []) res)))
+        proc (-> (process/shell {:continue true
+                                 :in (pr-str lock-details)
+                                 :out :string
+                                 :err :string} (format "git tag -a %s -F -" lock-name)))]
+    (handle-cmd opts proc)))
 
 (defn push-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd opts (format "git push origin %s" lock-name))))
+    (generic-cmd-v2 opts (format "git push origin %s" lock-name))))
 
 (defn delete-remote-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd opts (format "git push --delete origin %s" lock-name))))
+    (generic-cmd-v2 opts (format "git push --delete origin %s" lock-name))))
 
 (defn get-remote-tag [opts]
   (let [{:keys [lock-name]} opts]
-    (generic-cmd opts (format "git fetch origin tag %s --no-tags" lock-name))))
+    (generic-cmd-v2 opts (format "git fetch origin tag %s --no-tags" lock-name))))
 
 (defn read-tag [opts]
   (let [{:keys [lock-name]} opts
         cmd (format "git cat-file -p %s" lock-name)]
-    (generic-cmd opts cmd :tag-content)))
+    (generic-cmd-v2 opts cmd :tag-content)))
 
 (defn parse-tag-content [tag-content]
   (->> tag-content
@@ -68,39 +69,62 @@
         ownership (every? (fn [[k v]]
                             (= (get opts k) v))
                           (parse-tag-content tag-content))]
-    (if ownership
-      opts
-      (exit-with-code? 1 opts))))
+    (-> opts
+        (merge (if ownership
+                 {:exit 0
+                  :err nil}
+                 {:exit 1
+                  :err "Different owner"})))))
 
-(defn ^:export acquire [opts]
-  {:pre [(s/valid? ::bs/acquire opts)]}
-  (loop [step :generate-lock-id
-         opts opts]
-    (let [opts (update opts :steps (fnil conj []) step)]
-      (case step
-        :generate-lock-id (recur :delete-tag (generate-lock-id opts))
-        :delete-tag (recur :create-tag (delete-tag opts))
-        :create-tag (as-> (create-tag opts) $
-                      (recur-with-no-error :push-tag $))
-        :push-tag (as-> (push-tag opts) $
-                    (recur-with-error :get-remote-tag $))
-        :get-remote-tag (as-> (-> opts
-                                  delete-tag
-                                  get-remote-tag) $
-                          (let [{:keys [exit]} (handle-last-cmd $)]
-                            (if (= exit 0)
-                              (recur :read-tag $)
-                              (recur :delete-tag $))))
-        :read-tag (as-> (read-tag opts) $
-                    (recur-with-no-error :check-tag $))
-        :check-tag (check-tag opts)))))
+(defn acquire
+  ([opts]
+   (acquire opts identity))
+  ([opts end-fn]
+   (loop [step :generate-lock-id
+          opts opts]
+     (let [opts (update opts :steps (fnil conj []) step)]
+       (case step
+         :generate-lock-id (as-> (generate-lock-id opts) $
+                             (recur-ok-or-end :delete-tag $))
+         :delete-tag (as-> (delete-tag opts) $
+                       (recur :create-tag $))
+         :create-tag (as-> (create-tag opts) $
+                       (recur-ok-or-end :push-tag $))
+         :push-tag (as-> (push-tag opts) $
+                     (recur-not-ok-or-end :get-remote-tag $))
+         :get-remote-tag (as-> (-> opts
+                                   delete-tag
+                                   get-remote-tag) $
+                           (recur-ok-or-end :read-tag $))
+         :read-tag (as-> (read-tag opts) $
+                     (recur-ok-or-end :check-tag $))
+         :check-tag (as-> (check-tag opts) $
+                      (recur :end $))
+         :end (end-fn opts))))))
 
-(defn ^:export release [opts]
-  {:pre [(s/valid? ::bs/release opts)]}
-  (loop [step :generate-lock-id
-         opts opts]
-    (let [opts (update opts :steps (fnil conj []) step)]
-      (case step
-        :generate-lock-id (recur :delete-tag (generate-lock-id opts))
-        :delete-tag (recur :delete-remote-tag (delete-tag opts))
-        :delete-remote-tag (delete-remote-tag opts)))))
+(defn release-any-owner
+  ([opts]
+   (release-any-owner opts identity))
+  ([opts end-fn]
+   (loop [step :generate-lock-id
+          opts opts]
+     (let [opts (update opts :steps (fnil conj []) step)]
+       (case step
+         :generate-lock-id (as-> (generate-lock-id opts) $
+                             (recur :delete-tag $))
+         :delete-tag (as-> (delete-tag opts) $
+                       (recur :delete-remote-tag $))
+         :delete-remote-tag (as-> (delete-remote-tag opts) $
+                              (recur :end $))
+         :end (end-fn opts))))))
+
+(comment
+  #_{:clj-kondo/ignore [:unused-binding]}
+  (let [opts {:aws-account-id "251213589273"
+              :region "eu-west-1"
+              :ns "tofu.module-a.main"
+              :fn "invoke"
+              :owner "ALBERTO_MACOS"
+              :lock-keys [:aws-account-id :region :ns]
+              :run-cmd "false"}
+        end-fn identity]))

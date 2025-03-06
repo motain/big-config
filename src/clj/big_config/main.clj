@@ -1,7 +1,6 @@
 (ns big-config.main
   (:require
    [babashka.process :as process]
-   [big-config.env :refer [env]]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
@@ -11,11 +10,8 @@
 
 (defn print-and-flush
   [res]
-  (if (= env :prod)
-    (do
-      (println res)
-      (flush))
-    res))
+  (println res)
+  (flush))
 
 (defn ^:export create [args]
   {:pre [(s/valid? ::bs/create args)]}
@@ -35,6 +31,30 @@
 (defn git-push [opts]
   (utils/generic-cmd opts "git push"))
 
+(defn ^:export acquire-lock [opts]
+  #_{:clj-kondo/ignore [:loop-without-recur]}
+  (loop [step :lock-acquire
+         opts opts]
+    (println (description-for-step step))
+    (let [opts (update opts :steps (fnil conj []) step)
+          error-msg (error-for-step step)]
+      (case step
+        :lock-acquire (as-> (lock/acquire opts) $
+                        (utils/recur-ok-or-end :exit $ error-msg))
+        :exit opts))))
+
+(defn ^:export release-any-onwer [opts]
+  #_{:clj-kondo/ignore [:loop-without-recur]}
+  (loop [step :lock-acquire
+         opts opts]
+    (println (description-for-step step))
+    (let [opts (update opts :steps (fnil conj []) step)
+          error-msg (error-for-step step)]
+      (case step
+        :lock-release-all (as-> (lock/release-any-owner opts) $
+                            (utils/recur-ok-or-end :exit $ error-msg))
+        :exit opts))))
+
 (defn ^:export run-with-lock [opts]
   #_{:clj-kondo/ignore [:loop-without-recur]}
   (loop [step :lock-acquire
@@ -44,25 +64,25 @@
           error-msg (error-for-step step)]
       (case step
         :lock-acquire (as-> (lock/acquire opts) $
-                        (utils/recur-with-no-error :git-check $))
+                        (utils/recur-ok-or-end :git-check $))
         :git-check (as-> (git/check opts) $
-                     (utils/recur-with-no-error :run-cmd $))
+                     (utils/recur-ok-or-end :run-cmd $))
         :run-cmd (as-> (run-cmd opts) $
-                   (utils/recur-with-no-error :git-push $ error-msg))
+                   (utils/recur-ok-or-end :git-push $ error-msg))
         :git-push (as-> (git-push opts) $
-                    (utils/recur-with-no-error :lock-release $ error-msg))
-        :lock-release (lock/release opts)))))
+                    (utils/recur-ok-or-end :lock-release $ error-msg))
+        :lock-release (lock/release-any-owner opts)))))
 
 (comment
-  (alter-var-root #'env (constantly :test))
   (create {:aws-account-id "251213589273"
            :region "eu-west-1"
            :ns "tofu.module-a.main"
            :fn "invoke"})
+  #_{:clj-kondo/ignore [:unused-binding]}
   (let [opts {:aws-account-id "251213589273"
               :region "eu-west-1"
               :ns "tofu.module-a.main"
               :fn "invoke"
-              :owner "ALBERTO_MACOS"
-              :lock-keys [:aws-account-id :region :ns :owner]
-              :run-cmd "true"}] opts))
+              :owner "ALBERTO_MACO"
+              :lock-keys [:aws-account-id :region :ns]
+              :run-cmd "false"}]))

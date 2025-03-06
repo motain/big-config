@@ -36,20 +36,22 @@ git-check:
 # tofu acquire lock
 [group('tofu')]
 lock-acquire aws-account-id region ns owner:
-    clj -X big-config.lock/acquire \
+    @clj -X big-config.main/acquire-lock \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
-      :owner \"{{ owner }}\"
+      :owner \"{{ owner }}\" \
+      :lock-keys '[:aws-account-id :region :ns]'
 
 # tofu release lock
 [group('tofu')]
 lock-release aws-account-id region ns owner:
-    @clj -X big-config.lock/release \
+    @clj -X big-config.main/release-lock \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
-      :owner \"{{ owner }}\"
+      :owner \"{{ owner }}\" \
+      :lock-keys '[:aws-account-id :region :ns]'
 
 # tofu apply
 [group('tofu')]
@@ -59,7 +61,7 @@ apply aws-account-id region ns owner:
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
       :owner \"{{ owner }}\" \
-      :lock-keys '[:aws-account-id :region :ns :owner]' \
+      :lock-keys '[:aws-account-id :region :ns]' \
       :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply'\""
 
 
@@ -71,5 +73,5 @@ destroy aws-account-id region ns owner:
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
       :owner \"{{ owner }}\" \
-      :lock-keys '[:aws-account-id :region :ns :owner]' \
+      :lock-keys '[:aws-account-id :region :ns]' \
       :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu destroy'\""

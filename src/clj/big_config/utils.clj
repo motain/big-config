@@ -1,47 +1,59 @@
 (ns big-config.utils
   (:require
    [babashka.process :as process]
-   [big-config.env :refer [env]]
    [clojure.string :as str]
    [com.bunimo.clansi :as clansi]))
 
-(defn exit-with-code? [n opts]
-  (when (= env :prod)
-    (shutdown-agents)
-    (flush)
-    (System/exit n))
-  (assoc opts :exit n))
+(defn exit-with-code [n]
+  (shutdown-agents)
+  (flush)
+  (System/exit n))
 
 (defn handle-last-cmd [opts]
   (let [{:keys [cmd-results]} opts]
     (last cmd-results)))
 
-(defmacro recur-with-no-error
+(defmacro recur-ok-or-end
   ([key opts]
-   `(recur-with-no-error ~key ~opts nil))
+   `(recur-ok-or-end ~key ~opts nil))
   ([key opts msg]
-   `(let [proc# (handle-last-cmd ~opts)
-          exit# (get proc# :exit)
-          err# (get proc# :err)
+   `(let [exit# (:exit ~opts)
+          err# (:err ~opts)
           msg# (if ~msg
                  ~msg
                  err#)]
       (if (= exit# 0)
         (recur ~key ~opts)
-        (do
-          (println msg#)
-          (exit-with-code? 1 ~opts))))))
+        (recur :end (assoc ~opts :err msg#))))))
 
-(defmacro recur-with-error [key opts]
+(defmacro recur-not-ok-or-end [key opts]
   `(let [proc# (handle-last-cmd ~opts)
          exit# (get proc# :exit)]
      (if (= exit# 0)
-       ~opts
+       (recur :end ~opts)
        (recur ~key ~opts))))
 
 (def default-opts {:continue true
                    :out :string
                    :err :string})
+
+(defn handle-cmd [opts proc]
+  (let [{:keys [exit err]} proc
+        res (select-keys proc [:exit :out :err :cmd])]
+    (-> opts
+        (update :cmd-results (fnil conj []) res)
+        (merge {:exit exit :err err}))))
+
+(defn generic-cmd-v2
+  ([opts cmd]
+   (let [proc (process/shell default-opts cmd)]
+     (handle-cmd opts proc)))
+  ([opts cmd key]
+   (let [proc (process/shell default-opts cmd)]
+     (-> opts
+         (assoc key (-> (:out proc)
+                        str/trim-newline))
+         (handle-cmd proc)))))
 
 (defn generic-cmd
   ([opts cmd]
@@ -101,28 +113,27 @@
 
 (defn error-for-step [step]
   (let [messages {:check-tag "check-tag"
+                  :compare-revisions "compare-revisions"
+                  :create-tag "create-tag"
+                  :current-revision "current-revision"
+                  :delete-remote-tag "delete-remote-tag"
+                  :delete-tag "delete-tag"
+                  :fetch-origin "fetch-origin"
+                  :generate-lock-id "generate-lock-id"
+                  :get-remote-tag "get-remote-tag"
                   :git-push "Pushing the changes to git"
                   :git-diff "The working directory is not clean"
                   :git-check "The working directory is not clean"
-                  :get-remote-tag "get-remote-tag"
-                  :compare-revisions "compare-revisions"
-                  :upstream-name "upstream-name"
+                  :lock-acquire "Failed to acquire lock"
                   :lock-release "Releasing lock"
-                  :generate-lock-id "generate-lock-id"
-                  :push-tag "push-tag"
-                  :current-revision "current-revision"
-                  :run-cmd "The command executed with the lock failed"
                   :origin-revision "origin-revision"
-                  :fetch-origin "fetch-origin"
-                  :delete-tag "delete-tag"
-                  :lock-acquire "Failed to acquiring lock"
                   :prev-revision "prev-revision"
+                  :push-tag "push-tag"
+                  :run-cmd "The command executed with the lock failed"
                   :read-tag "read-tag"
-                  :create-tag "create-tag"
-                  :delete-remote-tag "delete-remote-tag"}]
+                  :upstream-name "upstream-name"}]
     (as-> step $
       (get messages $)
       (clansi/style $ :red))))
 
-(comment
-  (alter-var-root #'env (constantly :test)))
+(comment)

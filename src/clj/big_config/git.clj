@@ -1,6 +1,6 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [exit-with-code? generic-cmd recur-with-no-error
+   [big-config.utils :refer [exit-with-code generic-cmd recur-ok-or-end
                              error-for-step]]))
 
 (defn get-revision [opts revision key]
@@ -25,22 +25,22 @@
           error-msg (error-for-step step)]
       (case step
         :git-diff (as-> (git-diff opts) $
-                    (recur-with-no-error :fetch-origin $ error-msg))
+                    (recur-ok-or-end :fetch-origin $ error-msg))
         :fetch-origin (as-> (fetch-origin opts) $
-                        (recur-with-no-error :upstream-name $))
+                        (recur-ok-or-end :upstream-name $))
         :upstream-name (as-> (upstream-name opts :upstream-name) $
-                         (recur-with-no-error :prev-revision $))
+                         (recur-ok-or-end :prev-revision $))
         :prev-revision (as-> (get-revision opts "HEAD~1" :prev-revision) $
-                         (recur-with-no-error :current-revision $))
+                         (recur-ok-or-end :current-revision $))
         :current-revision (as-> (get-revision opts "HEAD" :current-revision) $
-                            (recur-with-no-error :origin-revision $))
+                            (recur-ok-or-end :origin-revision $))
         :origin-revision (as-> (:upstream-name opts) $
                            (get-revision opts $ :origin-revision)
-                           (recur-with-no-error :compare-revisions $))
+                           (recur-ok-or-end :compare-revisions $))
         :compare-revisions (let [{:keys [prev-revision
                                          current-revision
                                          origin-revision]} opts]
                              (if (or (= prev-revision origin-revision)
                                      (= current-revision origin-revision))
                                opts
-                               (exit-with-code? 1 opts)))))))
+                               (exit-with-code 1)))))))
