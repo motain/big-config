@@ -4,8 +4,9 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [description-for-step error-for-step generic-cmd
-                             handle-cmd recur-ok-or-end]]
+   [big-config.utils :refer [description-for-step error-for-step
+                             exit-with-code generic-cmd handle-cmd
+                             recur-ok-or-end]]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]
    [com.bunimo.clansi :refer [style]]))
@@ -57,7 +58,7 @@
                                   (recur-ok-or-end :exit $ error-msg))
         :exit opts))))
 
-(defn ^:export run-with-lock
+(defn run-with-lock
   ([opts]
    (run-with-lock opts identity))
   ([opts end-fn]
@@ -80,6 +81,16 @@
          :lock-release (as-> (lock/release-any-owner opts) $
                          (recur-ok-or-end :end $))
          :end (end-fn opts))))))
+
+(defn exit-end-fn [opts]
+  (let [exit (:exit opts)
+        err (:err opts)]
+    (when-not (= exit 0)
+      (println (style err :red)))
+    (exit-with-code exit)))
+
+(defn ^:export run-with-lock! [opts]
+  (run-with-lock opts exit-end-fn))
 
 (comment
   (create {:aws-account-id "251213589273"

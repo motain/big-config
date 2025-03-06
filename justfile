@@ -56,14 +56,13 @@ lock-release aws-account-id region ns owner:
 # tofu apply
 [group('tofu')]
 apply aws-account-id region ns owner:
-    @clj -X big-config.main/run-with-lock \
+    @clj -X big-config.main/run-with-lock! \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \
       :owner \"{{ owner }}\" \
       :lock-keys '[:aws-account-id :region :ns]' \
       :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply'\""
-
 
 # tofu destroy
 [group('tofu')]
