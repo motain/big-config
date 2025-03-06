@@ -67,7 +67,7 @@ apply aws-account-id region ns owner:
 # tofu destroy
 [group('tofu')]
 destroy aws-account-id region ns owner:
-    @clj -X big-config.main/run-with-lock \
+    @clj -X big-config.main/run-with-lock! \
       :aws-account-id \"{{ aws-account-id }}\" \
       :region \"{{ region }}\" \
       :ns \"{{ ns }}\" \

@@ -5,11 +5,11 @@
 
 (deftest run-with-lock-test
   (testing "true"
-    (let [opts {:aws-account-id "251213589273"
+    (let [opts {:aws-account-id "111111111111"
                 :region "eu-west-1"
-                :ns "tofu.module-a.main"
+                :ns "test.module"
                 :fn "invoke"
-                :owner "ALBERTO_MACOS"
+                :owner "CI"
                 :lock-keys [:aws-account-id :region :ns]
                 :run-cmd "true"}
           xs (atom [])
