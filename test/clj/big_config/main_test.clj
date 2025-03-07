@@ -17,8 +17,8 @@
       (run-with-lock opts end-fn)
       (is (every? #(= (:exit %) 0) @xs)))))
 
-(deftest run-with-lock-with-false-test
-  (testing "first false then true"
+(deftest run-with-lock-with-false-and-conflict-test
+  (testing "false and conflict"
     (let [opts   {:aws-account-id "111111111111"
                   :region         "eu-west-1"
                   :ns             "test.module"
@@ -29,7 +29,8 @@
           xs     (atom [])
           end-fn (partial swap! xs conj)]
       (run-with-lock opts end-fn)
+      (run-with-lock (assoc opts :owner "CI2") end-fn)
       (run-with-lock (assoc opts :run-cmd "true") end-fn)
       (as-> @xs $
         (map :exit $)
-        (is (= [1 0] $))))))
+        (is (= [1 1 0] $))))))

@@ -108,8 +108,11 @@
   ([opts]
    (release-any-owner opts identity))
   ([opts end-fn]
+   (release-any-owner opts end-fn (fn [_])))
+  ([opts end-fn step-fn]
    (loop [step :generate-lock-id
           opts opts]
+     (step-fn step)
      (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :generate-lock-id (as-> (generate-lock-id opts) $
