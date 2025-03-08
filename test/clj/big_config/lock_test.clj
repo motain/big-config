@@ -11,4 +11,5 @@
           end-fn (partial swap! xs conj)]
       (acquire opts end-fn)
       (release-any-owner opts end-fn)
+      (release-any-owner opts end-fn)
       (is (every? #(= (:exit %) 0) @xs)))))

@@ -75,34 +75,19 @@
     (vector? m) (mapv nested-sort-map m)
     :else m))
 
-(defn description-for-step [step]
-  (let [messages {:check-tag "check-tag"
-                  :git-push "Pushing the changes to git"
-                  :git-diff "git-diff"
+(defn step->message [step]
+  (let [messages {:lock-release-any-owner "Releasing lock"
                   :git-check "Checking if there are files not in the index"
-                  :get-remote-tag "get-remote-tag"
-                  :compare-revisions "compare-revisions"
-                  :upstream-name "upstream-name"
-                  :lock-release "Releasing lock"
-                  :generate-lock-id "generate-lock-id"
-                  :push-tag "push-tag"
-                  :current-revision "current-revision"
                   :run-cmd "Running the command with the lock"
-                  :origin-revision "origin-revision"
-                  :fetch-origin "fetch-origin"
-                  :delete-tag "delete-tag"
-                  :lock-acquire "Acquiring lock"
-                  :prev-revision "prev-revision"
-                  :read-tag "read-tag"
-                  :create-tag "create-tag"
-                  :delete-remote-tag "delete-remote-tag"}]
+                  :git-push "Pushing the changes to git"
+                  :lock-acquire "Acquiring lock"}]
     (as-> step $
       (get messages $)
       (clansi/style $ :green))))
 
 (defn println-step-fn [step]
   (when (not= :end step)
-    (println (description-for-step step))))
+    (println (step->message step))))
 
 (defn print-and-flush
   [res]

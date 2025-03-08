@@ -3,7 +3,7 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [description-for-step exit-end-fn generic-cmd
+   [big-config.utils :refer [step->message exit-end-fn generic-cmd
                              print-and-flush println-step-fn recur-ok-or-end
                              run-cmd]]
    [cheshire.core :as json]
@@ -23,12 +23,12 @@
   (generic-cmd opts "git push"))
 
 (defn ^:export acquire-lock [opts]
-  (println (description-for-step :lock-acquire))
+  (println-step-fn :lock-acquire)
   (lock/acquire opts (partial exit-end-fn "Failed to acquire the lock")))
 
 (defn ^:export release-lock-any-owner [opts]
-  (println (description-for-step :lock-release))
-  (lock/release-any-owner opts (partial exit-end-fn "Failed to release the lock")))
+  (println-step-fn :lock-release-any-owner)
+  (lock/release-any-owner opts))
 
 (defn run-with-lock
   ([opts]
@@ -49,9 +49,9 @@
          :run-cmd (as-> (run-cmd opts) $
                     (recur-ok-or-end :git-push $ "The command executed with the lock failed"))
          :git-push (as-> (git-push opts) $
-                     (recur-ok-or-end :lock-release $))
-         :lock-release (as-> (lock/release-any-owner opts) $
-                         (recur-ok-or-end :end $ "Failed to release the lock"))
+                     (recur-ok-or-end :lock-release-any-owner $))
+         :lock-release-any-owner (as-> (lock/release-any-owner opts) $
+                                   (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
 (defn ^:export run-with-lock! [opts]

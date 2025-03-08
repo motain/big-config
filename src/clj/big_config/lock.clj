@@ -75,6 +75,13 @@
                   {:exit 1
                    :err "Different owner"}))))
 
+(defn check-remote-tag [opts]
+  (let [{:keys [lock-name]} opts
+        cmd (format "git ls-remote --exit-code origin  refs/tags/%s" lock-name)
+        {:keys [exit] :as opts} (generic-cmd opts cmd)]
+    (when (= exit 2)
+      (assoc opts :exit 0))))
+
 (defn acquire
   ([opts]
    (acquire opts identity))
@@ -120,7 +127,9 @@
          :delete-tag (as-> (delete-tag opts) $
                        (recur :delete-remote-tag $))
          :delete-remote-tag (as-> (delete-remote-tag opts) $
-                              (recur :end $))
+                              (recur :check-remote-tag $))
+         :check-remote-tag (as-> (check-remote-tag opts) $
+                             (recur :end $))
          :end (end-fn opts))))))
 
 (comment)
