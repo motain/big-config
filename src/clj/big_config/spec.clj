@@ -1,5 +1,6 @@
 (ns big-config.spec
-  (:require [clojure.spec.alpha :as s]))
+  (:require
+   [clojure.spec.alpha :as s]))
 
 (s/def ::ns string?)
 (s/def ::fn string?)

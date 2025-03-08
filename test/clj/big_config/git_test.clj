@@ -1,6 +1,7 @@
 (ns big-config.git-test
-  (:require [big-config.git :refer [check]]
-            [clojure.test :refer [deftest is testing]]))
+  (:require
+   [big-config.git :refer [check]]
+   [clojure.test :refer [deftest is testing]]))
 
 (deftest check-test
   (testing "git check test"

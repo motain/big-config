@@ -3,9 +3,8 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
-   [big-config.utils :refer [step->message exit-end-fn generic-cmd
-                             print-and-flush println-step-fn recur-ok-or-end
-                             run-cmd]]
+   [big-config.utils :refer [exit-end-fn generic-cmd print-and-flush
+                             println-step-fn recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
    [clojure.spec.alpha :as s]))
 

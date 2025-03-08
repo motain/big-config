@@ -1,9 +1,8 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
-   [big-config.utils :as utils :refer [generic-cmd handle-cmd
-                                       nested-sort-map recur-not-ok-or-end
-                                       recur-ok-or-end]]
+   [big-config.utils :as utils :refer [generic-cmd handle-cmd nested-sort-map
+                                       recur-not-ok-or-end recur-ok-or-end]]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]

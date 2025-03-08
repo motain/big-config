@@ -1,8 +1,8 @@
 (ns user
   (:require
    [clojure.spec.alpha :as s]
-   [expound.alpha :as expound]
    [clojure.tools.namespace.repl :as repl]
+   [expound.alpha :as expound]
    [lambdaisland.classpath.watch-deps :as watch-deps]))
 
 (watch-deps/start! {:aliases [:dev :test]})
