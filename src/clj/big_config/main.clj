@@ -1,36 +1,28 @@
 (ns big-config.main
   (:require
    [aero.core :as aero]
+   [babashka.process :as process]
    [big-config.git :as git]
    [big-config.lock :as lock]
-   [big-config.spec :as bs]
-   [big-config.utils :refer [exit-end-fn generic-cmd print-and-flush
+   [big-config.utils :refer [exit-end-fn exit-with-code generic-cmd
                              println-step-fn recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
-   [clojure.spec.alpha :as s]
    [clojure.string :as str]))
+
+(defn resolve-array [config key xs]
+  (assoc config key
+         (->> xs
+              (map (fn [e] (if (keyword? e) (e config) e)))
+              (str/join ""))))
 
 (defn read-module [cmd module profile]
   (let [config (-> (aero/read-config "big-config.edn" {:profile profile})
                    module
                    (assoc :cmd cmd))
-        {:keys [run-cmd]} config]
-    (if run-cmd
-      (assoc config :run-cmd
-             (->> run-cmd
-                  (map (fn [e] (if (keyword? e) (e config) e)))
-                  (str/join "")))
-      config)))
-
-(defn ^:export create [args]
-  {:pre [(s/valid? ::bs/create args)]}
-  (let [{:keys [fn ns]} args]
-    (-> (format "%s/%s" ns fn)
-        (symbol)
-        requiring-resolve
-        (apply (vector args))
-        (json/generate-string {:pretty true})
-        print-and-flush)))
+        {:keys [run-cmd working-dir]} config
+        config (resolve-array config :working-dir working-dir)
+        config (resolve-array config :run-cmd run-cmd)]
+    config))
 
 (defn git-push [opts]
   (generic-cmd opts "git push"))
@@ -67,12 +59,30 @@
                                    (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
-(defn ^:export run-with-lock! [{[cmd module profile] :args}]
-  (-> (read-module cmd module profile)
-      (run-with-lock exit-end-fn println-step-fn)))
+(defn init [opts]
+  (let [{:keys [run-cmd]} opts]
+    (-> (process/shell {:continue true} run-cmd)
+        :exit
+        (exit-with-code))))
 
-(comment
-  (create {:aws-account-id "251213589273"
-           :region "eu-west-1"
-           :ns "tofu.module-a.main"
-           :fn "invoke"}))
+(defn plan [opts]
+  (let [{:keys [fn ns working-dir run-cmd]} opts
+        f (str working-dir "/main.tf.json")]
+    (-> (format "%s/%s" ns fn)
+        (symbol)
+        requiring-resolve
+        (apply (vector opts))
+        (json/generate-string {:pretty true})
+        (->> (spit f)))
+    (-> (process/shell {:continue true} run-cmd)
+        :exit
+        (exit-with-code))))
+
+(defn ^:export tofu-facade [{[cmd module profile] :args}]
+  (as-> (read-module cmd module profile) $
+    (case cmd
+      "init" (plan $)
+      "plan" (plan $)
+      ("apply" "destroy") (run-with-lock $ exit-end-fn println-step-fn))))
+
+(comment)

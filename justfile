@@ -1,37 +1,11 @@
 help:
     @just -f {{ justfile() }} --list --unsorted
 
-# generate the main.tf.json
-[group('tofu')]
-create aws-account-id region ns fn:
-    clj -X:dev big-config.main/create \
-      :aws-account-id \"{{ aws-account-id }}\" \
-      :region \"{{ region }}\" \
-      :ns \"{{ ns }}\" \
-      :fn \"{{ fn }}\"
-
 # check the AWS identity
 [group('tofu')]
 get-caller-identity aws-account-id:
     cd tofu/{{ aws-account-id }} && \
     direnv exec . aws sts get-caller-identity
-
-# tofu init
-[group('tofu')]
-init aws-account-id region ns:
-    cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
-    direnv exec . tofu init
-
-# tofu plan
-[group('tofu')]
-plan aws-account-id region ns:
-    cd tofu/{{ aws-account-id }}/{{ region }}/{{ ns }} && \
-    direnv exec . tofu plan
-
-# tofu git check
-[group('tofu')]
-git-check:
-    clj -X big-config.git/check
 
 # tofu acquire lock
 [group('tofu')]
@@ -53,8 +27,8 @@ lock-release-any-owner aws-account-id region ns owner:
       :owner \"{{ owner }}\" \
       :lock-keys '[:aws-account-id :region :ns]'
 
-# tofu run-with-lock!
+# tofu facade
 [group('tofu')]
 tofu cmd module profile:
-    @clj -X big-config.main/run-with-lock! \
-      :args '[{{ cmd }} :{{ module }} :{{ profile }}]'
+    @clj -X:dev big-config.main/tofu-facade \
+      :args '["{{ cmd }}" :{{ module }} :{{ profile }}]'
