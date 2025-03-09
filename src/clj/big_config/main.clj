@@ -1,12 +1,26 @@
 (ns big-config.main
   (:require
+   [aero.core :as aero]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.spec :as bs]
    [big-config.utils :refer [exit-end-fn generic-cmd print-and-flush
                              println-step-fn recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
-   [clojure.spec.alpha :as s]))
+   [clojure.spec.alpha :as s]
+   [clojure.string :as str]))
+
+(defn read-module [cmd module profile]
+  (let [config (-> (aero/read-config "big-config.edn" {:profile profile})
+                   module
+                   (assoc :cmd cmd))
+        {:keys [run-cmd]} config]
+    (if run-cmd
+      (assoc config :run-cmd
+             (->> run-cmd
+                  (map (fn [e] (if (keyword? e) (e config) e)))
+                  (str/join "")))
+      config)))
 
 (defn ^:export create [args]
   {:pre [(s/valid? ::bs/create args)]}
@@ -53,8 +67,9 @@
                                    (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
-(defn ^:export run-with-lock! [opts]
-  (run-with-lock opts exit-end-fn println-step-fn))
+(defn ^:export run-with-lock! [{[cmd module profile] :args}]
+  (-> (read-module cmd module profile)
+      (run-with-lock exit-end-fn println-step-fn)))
 
 (comment
   (create {:aws-account-id "251213589273"

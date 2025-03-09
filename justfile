@@ -53,24 +53,8 @@ lock-release-any-owner aws-account-id region ns owner:
       :owner \"{{ owner }}\" \
       :lock-keys '[:aws-account-id :region :ns]'
 
-# tofu apply
+# tofu run-with-lock!
 [group('tofu')]
-apply aws-account-id region ns owner:
+tofu cmd module profile:
     @clj -X big-config.main/run-with-lock! \
-      :aws-account-id \"{{ aws-account-id }}\" \
-      :region \"{{ region }}\" \
-      :ns \"{{ ns }}\" \
-      :owner \"{{ owner }}\" \
-      :lock-keys '[:aws-account-id :region :ns]' \
-      :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu apply'\""
-
-# tofu destroy
-[group('tofu')]
-destroy aws-account-id region ns owner:
-    @clj -X big-config.main/run-with-lock! \
-      :aws-account-id \"{{ aws-account-id }}\" \
-      :region \"{{ region }}\" \
-      :ns \"{{ ns }}\" \
-      :owner \"{{ owner }}\" \
-      :lock-keys '[:aws-account-id :region :ns]' \
-      :run-cmd "\"bash -c 'cd tofu/251213589273/eu-west-1/tofu.module-a.main && direnv exec . tofu destroy'\""
+      :args '[{{ cmd }} :{{ module }} :{{ profile }}]'
