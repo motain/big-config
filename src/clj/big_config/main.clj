@@ -27,14 +27,6 @@
 (defn git-push [opts]
   (generic-cmd opts "git push"))
 
-(defn ^:export acquire-lock [opts]
-  (println-step-fn :lock-acquire)
-  (lock/acquire opts (partial exit-end-fn "Failed to acquire the lock")))
-
-(defn ^:export release-lock-any-owner [opts]
-  (println-step-fn :lock-release-any-owner)
-  (lock/release-any-owner opts))
-
 (defn run-with-lock
   ([opts]
    (run-with-lock opts identity))
@@ -81,8 +73,12 @@
 (defn ^:export tofu-facade [{[cmd module profile] :args}]
   (as-> (read-module cmd module profile) $
     (case cmd
-      "init" (plan $)
+      "init" (init $)
       "plan" (plan $)
+      "lock" (do (println-step-fn :lock-acquire)
+                 (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
+      "unlock-any" (do (println-step-fn :lock-release-any-owner)
+                       (lock/release-any-owner $))
       ("apply" "destroy") (run-with-lock $ exit-end-fn println-step-fn))))
 
 (comment)
