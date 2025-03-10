@@ -79,9 +79,10 @@
     :else m))
 
 (defn step->message [step]
-  (let [messages {:lock-release-any-owner "Releasing lock"
+  (let [messages {:generate-main-tf-json "Generating the main.tf.json file"
+                  :lock-release-any-owner "Releasing lock"
                   :git-check "Checking if there are files not in the index"
-                  :run-cmd "Running the command with the lock"
+                  :run-cmd "Running the tofu command"
                   :git-push "Pushing the changes to git"
                   :lock-acquire "Acquiring lock"}]
     (as-> step $

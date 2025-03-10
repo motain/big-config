@@ -1,11 +1,10 @@
 (ns big-config.main
   (:require
    [aero.core :as aero]
-   [babashka.process :as process]
    [big-config.git :as git]
    [big-config.lock :as lock]
-   [big-config.utils :refer [default-opts exit-end-fn generic-cmd handle-cmd
-                             println-step-fn recur-ok-or-end run-cmd]]
+   [big-config.utils :refer [exit-end-fn generic-cmd println-step-fn
+                             recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
    [clojure.string :as str]))
 
@@ -51,28 +50,46 @@
                                    (recur-ok-or-end :end $ "Failed to release the lock"))
          :end (end-fn opts))))))
 
-(defn ^:export init-or-plan [opts]
-  (let [{:keys [fn ns working-dir run-cmd env]} opts
-        f (str working-dir "/main.tf.json")
-        shell-opts (case env
-                     :shell {:continue true}
-                     :repl default-opts)]
-    (-> (format "%s/%s" ns fn)
-        (symbol)
-        requiring-resolve
-        (apply (vector opts))
-        (json/generate-string {:pretty true})
-        (->> (spit f)))
-    (->> (process/shell shell-opts run-cmd)
-         (handle-cmd opts)
-         (exit-end-fn))))
+(defn generate-main-tf-json [opts]
+  (let [{:keys [fn ns working-dir env]} opts
+        f (str working-dir "/main.tf.json")]
+    (try
+      (-> (format "%s/%s" ns fn)
+          (symbol)
+          requiring-resolve
+          (apply (vector opts))
+          (json/generate-string {:pretty true})
+          (->> (spit f))
+          (merge opts {:exit 0
+                       :err nil}))
+      (catch Exception e
+        (merge opts {:exit 1
+                     :err (pr-str e)})))))
+
+(defn run
+  ([opts]
+   (run opts identity))
+  ([opts end-fn]
+   (run opts end-fn (fn [_])))
+  ([opts end-fn step-fn]
+   #_{:clj-kondo/ignore [:loop-without-recur]}
+   (loop [step :generate-main-tf-json
+          opts opts]
+     (step-fn step)
+     (let [opts (update opts :steps (fnil conj []) step)]
+       (case step
+         :generate-main-tf-json (as-> (generate-main-tf-json opts) $
+                                  (recur-ok-or-end :run-cmd $ "Failed to generate the main.tf.json file"))
+         :run-cmd (as-> (run-cmd opts) $
+                    (recur-ok-or-end :end $ "The command executed failed"))
+         :end (end-fn opts))))))
 
 (defn ^:export tofu-facade [{[cmd module profile] :args
                              env :env}]
   (as-> (read-module cmd module profile) $
     (assoc $ :env (or env :shell))
     (case cmd
-      ("init" "plan") (init-or-plan $)
+      ("init" "plan") (run $ exit-end-fn println-step-fn)
       "lock" (do (println-step-fn :lock-acquire)
                  (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
       "unlock-any" (do (println-step-fn :lock-release-any-owner)
