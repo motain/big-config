@@ -4,7 +4,7 @@
    [babashka.process :as process]
    [big-config.git :as git]
    [big-config.lock :as lock]
-   [big-config.utils :refer [exit-end-fn exit-with-code generic-cmd handle-cmd
+   [big-config.utils :refer [default-opts exit-end-fn generic-cmd handle-cmd
                              println-step-fn recur-ok-or-end run-cmd]]
    [cheshire.core :as json]
    [clojure.string :as str]))
@@ -52,15 +52,18 @@
          :end (end-fn opts))))))
 
 (defn ^:export init-or-plan [opts]
-  (let [{:keys [fn ns working-dir run-cmd]} opts
-        f (str working-dir "/main.tf.json")]
+  (let [{:keys [fn ns working-dir run-cmd env]} opts
+        f (str working-dir "/main.tf.json")
+        shell-opts (case env
+                     :shell {:continue true}
+                     :repl default-opts)]
     (-> (format "%s/%s" ns fn)
         (symbol)
         requiring-resolve
         (apply (vector opts))
         (json/generate-string {:pretty true})
         (->> (spit f)))
-    (->> (process/shell {:continue true} run-cmd)
+    (->> (process/shell shell-opts run-cmd)
          (handle-cmd opts)
          (exit-end-fn))))
 
@@ -77,5 +80,5 @@
       ("apply" "destroy") (run-with-lock $ exit-end-fn println-step-fn))))
 
 (comment
-  (tofu-facade {:args ["plan" :module-a :dev]
+  (tofu-facade {:args ["init" :module-a :dev]
                 :env :repl}))

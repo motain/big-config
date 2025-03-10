@@ -39,7 +39,10 @@
 
 (defn handle-cmd [opts proc]
   (let [{:keys [exit err]} proc
-        res (select-keys proc [:exit :out :err :cmd])]
+        res (-> (select-keys proc [:exit :out :err :cmd])
+                (update-vals (fn [v] (if (string? v)
+                                       (str/replace v #"\x1B\[[0-9;]+m" "")
+                                       v))))]
     (-> opts
         (update :cmd-results (fnil conj []) res)
         (merge {:exit exit :err err}))))
@@ -88,11 +91,6 @@
 (defn println-step-fn [step]
   (when (not= :end step)
     (println (step->message step))))
-
-(defn print-and-flush
-  [res]
-  (println res)
-  (flush))
 
 (defn run-cmd [opts]
   (let [{:keys [run-cmd]} opts
