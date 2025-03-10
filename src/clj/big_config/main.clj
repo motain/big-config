@@ -79,7 +79,7 @@
      (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :generate-main-tf-json (as-> (generate-main-tf-json opts) $
-                                  (recur-ok-or-end :run-cmd $ "Failed to generate the main.tf.json file"))
+                                  (recur-ok-or-end :run-cmd $))
          :run-cmd (as-> (run-cmd opts) $
                     (recur-ok-or-end :end $ "The command executed failed"))
          :end (end-fn opts))))))
