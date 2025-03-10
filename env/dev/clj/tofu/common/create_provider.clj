@@ -1,6 +1,6 @@
 (ns tofu.common.create-provider)
 
-(defn ^:export invoke [opts]
+(defn invoke [opts]
   (let [{:keys [region
                 bucket
                 module

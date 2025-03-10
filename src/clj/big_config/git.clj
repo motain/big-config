@@ -28,7 +28,7 @@
                   {:exit 1
                    :err "The local revisions don't match the remote revision"}))))
 
-(defn ^:export check
+(defn check
   ([opts]
    (check opts identity))
   ([opts end-fn]
