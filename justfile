@@ -1,6 +1,13 @@
 help:
     @just -f {{ justfile() }} --list --unsorted
 
+# clean before tofu init
+[group('tofu')]
+clean:
+    cd tofu/251213589273/eu-west-1 \
+    && rm -rf tofu.module-a.main \
+    && mkdir tofu.module-a.main
+
 # check the AWS identity
 [group('tofu')]
 get-caller-identity aws-account-id:
