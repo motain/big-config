@@ -51,7 +51,7 @@
          :end (end-fn opts))))))
 
 (defn generate-main-tf-json [opts]
-  (let [{:keys [fn ns working-dir env]} opts
+  (let [{:keys [fn ns working-dir]} opts
         f (str working-dir "/main.tf.json")]
     (try
       (-> (format "%s/%s" ns fn)
