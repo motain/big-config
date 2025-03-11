@@ -11,17 +11,21 @@
 (defn resolve-array [config key xs]
   (assoc config key
          (->> xs
-              (map (fn [e] (if (keyword? e) (e config) e)))
+              (map (fn [e] (if (keyword? e) (name (e config)) e)))
               (str/join ""))))
 
 (defn read-module [cmd module profile]
   (let [config (-> (aero/read-config "big-config.edn" {:profile profile})
                    module
-                   (assoc :cmd cmd))
+                   (merge {:cmd cmd
+                           :module module
+                           :profile profile}))
         {:keys [run-cmd working-dir]} config
         config (resolve-array config :working-dir working-dir)
         config (resolve-array config :run-cmd run-cmd)]
     config))
+
+(read-module "apply" :module-a :dev)
 
 (defn git-push [opts]
   (generic-cmd opts "git push"))
