@@ -18,4 +18,4 @@ get-caller-identity aws-account-id:
 [group('tofu')]
 tofu cmd module profile:
     @clj -X:dev big-config.main/tofu-facade \
-      :args '["{{ cmd }}" :{{ module }} :{{ profile }}]'
+      :args '[:{{ cmd }} :{{ module }} :{{ profile }}]'

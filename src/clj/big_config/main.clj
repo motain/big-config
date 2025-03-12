@@ -93,12 +93,12 @@
   (as-> (read-module cmd module profile) $
     (assoc $ :env (or env :shell))
     (case cmd
-      ("init" "plan") (run $ exit-end-fn println-step-fn)
-      "lock" (do (println-step-fn :lock-acquire)
-                 (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
-      "unlock-any" (do (println-step-fn :lock-release-any-owner)
-                       (lock/release-any-owner $))
-      ("apply" "destroy") (run-with-lock $ exit-end-fn println-step-fn))))
+      (:init :plan) (run $ exit-end-fn println-step-fn)
+      :lock (do (println-step-fn :lock-acquire)
+                (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
+      :unlock-any (do (println-step-fn :lock-release-any-owner)
+                      (lock/release-any-owner $))
+      (:apply :destroy) (run-with-lock $ exit-end-fn println-step-fn))))
 
 (comment
   (tofu-facade {:args ["init" :module-a :dev]
