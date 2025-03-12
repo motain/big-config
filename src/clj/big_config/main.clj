@@ -3,8 +3,8 @@
    [aero.core :as aero]
    [big-config.git :as git]
    [big-config.lock :as lock]
-   [big-config.utils :refer [exit-end-fn generic-cmd println-step-fn
-                             recur-ok-or-end run-cmd]]
+   [big-config.utils :refer [exit-end-fn generic-cmd recur-ok-or-end run-cmd
+                             step->message]]
    [cheshire.core :as json]
    [clojure.string :as str]))
 
@@ -70,30 +70,45 @@
         (merge opts {:exit 1
                      :err (pr-str e)})))))
 
+(defn default-step-fn [{:keys [f step opts]}]
+  (let [opts (update opts :steps (fnil conj []) step)]
+    (f opts)))
+
 (defn run
   ([opts]
-   (run opts identity))
-  ([opts end-fn]
-   (run opts end-fn (fn [& _])))
-  ([opts end-fn step-fn]
+   (run opts default-step-fn))
+  ([opts step-fn]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :generate-main-tf-json
           opts opts]
-     (step-fn step opts)
-     (let [opts (update opts :steps (fnil conj []) step)]
-       (case step
-         :generate-main-tf-json (as-> (generate-main-tf-json opts) $
-                                  (recur-ok-or-end :run-cmd $))
-         :run-cmd (as-> (run-cmd opts) $
-                    (recur-ok-or-end :end $ "The command executed failed"))
-         :end (end-fn opts))))))
+     (case step
+       :generate-main-tf-json (as-> (step-fn {:f generate-main-tf-json
+                                              :step step
+                                              :opts opts}) $
+                                (recur-ok-or-end :run-cmd $))
+       :run-cmd (as-> (step-fn {:f run-cmd
+                                :step step
+                                :opts opts}) $
+                  (recur-ok-or-end :end $))
+       :end (step-fn {:f identity
+                      :step step
+                      :opts opts})))))
 
-(defn ^:export tofu-facade [{[cmd module profile] :args
-                             env :env}]
+(defn println-step-fn [{:keys [f step opts]}]
+  (when (not= step :end)
+    (println (step->message step)))
+  (default-step-fn {:f f
+                    :step step
+                    :opts opts})
+  (when (= step :end)
+    (exit-end-fn opts)))
+
+(defn ^:export tofu [{[cmd module profile] :args
+                      env :env}]
   (as-> (read-module cmd module profile) $
     (assoc $ :env (or env :shell))
     (case cmd
-      (:init :plan) (run $ exit-end-fn println-step-fn)
+      (:init :plan) (run $)
       :lock (do (println-step-fn :lock-acquire)
                 (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
       :unlock-any (do (println-step-fn :lock-release-any-owner)
@@ -101,5 +116,5 @@
       (:apply :destroy) (run-with-lock $ exit-end-fn println-step-fn))))
 
 (comment
-  (tofu-facade {:args ["init" :module-a :dev]
-                :env :repl}))
+  (-> (tofu {:args [:init :module-a :dev]
+             :env :repl})))

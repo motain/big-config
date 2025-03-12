@@ -38,14 +38,13 @@
                    :err :string})
 
 (defn handle-cmd [opts proc]
-  (let [{:keys [exit err]} proc
-        res (-> (select-keys proc [:exit :out :err :cmd])
+  (let [res (-> (select-keys proc [:exit :out :err :cmd])
                 (update-vals (fn [v] (if (string? v)
                                        (str/replace v #"\x1B\[[0-9;]+m" "")
                                        v))))]
     (-> opts
         (update :cmd-results (fnil conj []) res)
-        (merge {:exit exit :err err}))))
+        (merge (select-keys res [:exit :err])))))
 
 (defn generic-cmd
   ([opts cmd]
@@ -97,8 +96,12 @@
      (println (step->message step)))))
 
 (defn run-cmd [opts]
-  (let [{:keys [run-cmd]} opts
-        proc (process/shell {:continue true} run-cmd)]
+  (let [{:keys [profile run-cmd]} opts
+        shell-opts {:continue true}
+        proc (process/shell (if (= profile :shell)
+                              shell-opts
+                              (merge shell-opts {:out :string
+                                                 :err :string})) run-cmd)]
     (handle-cmd opts proc)))
 
 (defn exit-end-fn
