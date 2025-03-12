@@ -32,11 +32,11 @@
   ([opts]
    (check opts identity))
   ([opts end-fn]
-   (check opts end-fn (fn [_])))
+   (check opts end-fn (fn [& _])))
   ([opts end-fn step-fn]
    (loop [step :git-diff
           opts opts]
-     (step-fn step)
+     (step-fn step opts)
      (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :git-diff (as-> (git-diff opts) $

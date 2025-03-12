@@ -89,9 +89,12 @@
       (get messages $)
       (clansi/style $ :green))))
 
-(defn println-step-fn [step]
-  (when (not= :end step)
-    (println (step->message step))))
+(defn println-step-fn
+  ([step]
+   (println-step-fn step nil))
+  ([step _opts]
+   (when (not= :end step)
+     (println (step->message step)))))
 
 (defn run-cmd [opts]
   (let [{:keys [run-cmd]} opts

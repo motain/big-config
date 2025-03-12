@@ -34,12 +34,12 @@
   ([opts]
    (run-with-lock opts identity))
   ([opts end-fn]
-   (run-with-lock opts end-fn (fn [_])))
+   (run-with-lock opts end-fn (fn [& _])))
   ([opts end-fn step-fn]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :lock-acquire
           opts opts]
-     (step-fn step)
+     (step-fn step opts)
      (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :lock-acquire (as-> (lock/acquire opts) $
@@ -74,12 +74,12 @@
   ([opts]
    (run opts identity))
   ([opts end-fn]
-   (run opts end-fn (fn [_])))
+   (run opts end-fn (fn [& _])))
   ([opts end-fn step-fn]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :generate-main-tf-json
           opts opts]
-     (step-fn step)
+     (step-fn step opts)
      (let [opts (update opts :steps (fnil conj []) step)]
        (case step
          :generate-main-tf-json (as-> (generate-main-tf-json opts) $

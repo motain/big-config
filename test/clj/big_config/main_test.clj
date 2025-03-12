@@ -23,3 +23,13 @@
       (as-> @xs $
         (map :exit $)
         (is (= [1 1 0 0] $))))))
+
+(deftest step-fn-test
+  (testing "the step-fn with step and opts"
+    (let [opts    default-opts
+          xs      (atom [])
+          step-fn (partial swap! xs conj)]
+      (run-with-lock opts identity step-fn)
+      (is (= 12 (count @xs)))
+      (is (every? (fn [x] (or (keyword? x)
+                              (map? x))) @xs)))))
