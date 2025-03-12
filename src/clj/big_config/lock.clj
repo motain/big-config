@@ -1,8 +1,9 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
-   [big-config.utils :as utils :refer [generic-cmd handle-cmd nested-sort-map
-                                       recur-not-ok-or-end recur-ok-or-end]]
+   [big-config.utils :as utils :refer [default-step-fn generic-cmd handle-cmd
+                                       nested-sort-map recur-not-ok-or-end
+                                       recur-ok-or-end]]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
@@ -83,52 +84,68 @@
 
 (defn acquire
   ([opts]
-   (acquire opts identity))
-  ([opts end-fn]
-   (acquire opts end-fn (fn [& _])))
-  ([opts end-fn step-fn]
+   (acquire opts default-step-fn))
+  ([opts step-fn]
    (loop [step :generate-lock-id
           opts opts]
-     (step-fn step opts)
-     (let [opts (update opts :steps (fnil conj []) step)]
-       (case step
-         :generate-lock-id (as-> (generate-lock-id opts) $
-                             (recur-ok-or-end :delete-tag $))
-         :delete-tag (as-> (delete-tag opts) $
-                       (recur :create-tag $))
-         :create-tag (as-> (create-tag opts) $
-                       (recur-ok-or-end :push-tag $))
-         :push-tag (as-> (push-tag opts) $
-                     (recur-not-ok-or-end :get-remote-tag $))
-         :get-remote-tag (as-> (-> opts
-                                   delete-tag
-                                   get-remote-tag) $
-                           (recur-ok-or-end :read-tag $))
-         :read-tag (as-> (read-tag opts) $
-                     (recur-ok-or-end :check-tag $))
-         :check-tag (as-> (check-tag opts) $
-                      (recur :end $))
-         :end (end-fn opts))))))
+     (case step
+       :generate-lock-id (as-> (step-fn {:f generate-lock-id
+                                         :step step
+                                         :opts opts}) $
+                           (recur-ok-or-end :delete-tag $))
+       :delete-tag (as-> (step-fn {:f delete-tag
+                                   :step step
+                                   :opts opts}) $
+                     (recur :create-tag $))
+       :create-tag (as-> (step-fn {:f create-tag
+                                   :step step
+                                   :opts opts}) $
+                     (recur-ok-or-end :push-tag $))
+       :push-tag (as-> (step-fn {:f push-tag
+                                 :step step
+                                 :opts opts}) $
+                   (recur-not-ok-or-end :get-remote-tag $))
+       :get-remote-tag (as-> (step-fn {:f (comp get-remote-tag delete-tag)
+                                       :step step
+                                       :opts opts}) $
+                         (recur-ok-or-end :read-tag $))
+       :read-tag (as-> (step-fn {:f read-tag
+                                 :step step
+                                 :opts opts}) $
+                   (recur-ok-or-end :check-tag $))
+       :check-tag (as-> (step-fn {:f check-tag
+                                  :step step
+                                  :opts opts}) $
+                    (recur :end $))
+       :end (step-fn {:f identity
+                      :step step
+                      :opts opts})))))
 
 (defn release-any-owner
   ([opts]
-   (release-any-owner opts identity))
-  ([opts end-fn]
-   (release-any-owner opts end-fn (fn [& _])))
-  ([opts end-fn step-fn]
+   (release-any-owner opts default-step-fn))
+  ([opts step-fn]
    (loop [step :generate-lock-id
           opts opts]
-     (step-fn step opts)
-     (let [opts (update opts :steps (fnil conj []) step)]
-       (case step
-         :generate-lock-id (as-> (generate-lock-id opts) $
-                             (recur :delete-tag $))
-         :delete-tag (as-> (delete-tag opts) $
-                       (recur :delete-remote-tag $))
-         :delete-remote-tag (as-> (delete-remote-tag opts) $
-                              (recur :check-remote-tag $))
-         :check-remote-tag (as-> (check-remote-tag opts) $
-                             (recur :end $))
-         :end (end-fn opts))))))
+     (case step
+       :generate-lock-id (as-> (step-fn {:f generate-lock-id
+                                         :step step
+                                         :opts opts}) $
+                           (recur :delete-tag $))
+       :delete-tag (as-> (step-fn {:f delete-tag
+                                   :step step
+                                   :opts opts}) $
+                     (recur :delete-remote-tag $))
+       :delete-remote-tag (as-> (step-fn {:f delete-remote-tag
+                                          :step step
+                                          :opts opts}) $
+                            (recur :check-remote-tag $))
+       :check-remote-tag (as-> (step-fn {:f check-remote-tag
+                                         :step step
+                                         :opts opts}) $
+                           (recur :end $))
+       :end (step-fn {:f identity
+                      :step step
+                      :opts opts})))))
 
 (comment)

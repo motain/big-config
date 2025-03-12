@@ -96,12 +96,13 @@
      (println (step->message step)))))
 
 (defn run-cmd [opts]
-  (let [{:keys [profile run-cmd]} opts
+  (let [{:keys [env run-cmd]} opts
         shell-opts {:continue true}
-        proc (process/shell (if (= profile :shell)
-                              shell-opts
-                              (merge shell-opts {:out :string
-                                                 :err :string})) run-cmd)]
+        shell-opts (case env
+                     :shell shell-opts
+                     :repl (merge shell-opts {:out :string
+                                              :err :string}))
+        proc (process/shell shell-opts run-cmd)]
     (handle-cmd opts proc)))
 
 (defn exit-end-fn
@@ -115,5 +116,9 @@
      (case env
        :shell (exit-with-code exit)
        :repl opts))))
+
+(defn default-step-fn [{:keys [f step opts]}]
+  (let [opts (update opts :steps (fnil conj []) step)]
+    (f opts)))
 
 (comment)
