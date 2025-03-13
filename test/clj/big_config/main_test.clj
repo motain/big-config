@@ -9,10 +9,10 @@
     (let [opts    default-opts
           xs      (atom [])
           step-fn (partial test-step-fn xs)]
-      (run-with-lock (assoc opts :run-cmd "false") step-fn)
-      (run-with-lock (assoc opts :owner "CI2") step-fn)
-      (run-with-lock opts step-fn)
-      (run-with-lock (assoc opts :owner "CI2") step-fn)
+      (run-with-lock step-fn (assoc opts :run-cmd "false"))
+      (run-with-lock step-fn (assoc opts :owner "CI2"))
+      (run-with-lock step-fn opts)
+      (run-with-lock step-fn (assoc opts :owner "CI2"))
       (as-> @xs $
         (map :exit $)
         (is (= [1 1 0 0] $))))))
@@ -26,7 +26,7 @@
     (let [opts    default-opts
           xs      (atom [])
           step-fn (partial catch-all-step-fn xs)]
-      (run-with-lock opts step-fn)
+      (run-with-lock step-fn opts)
       (is (= 12 (count @xs)))
       (is (every? (fn [x] (or (keyword? x)
                               (map? x))) @xs)))))

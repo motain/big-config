@@ -33,35 +33,24 @@
 
 (defn run-with-lock
   ([opts]
-   (run-with-lock opts default-step-fn))
-  ([opts step-fn]
+   (run-with-lock default-step-fn opts))
+  ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :lock-acquire
           opts opts]
-     (case step
-       :lock-acquire (as-> (step-fn {:f lock/acquire
-                                     :step step
-                                     :opts opts}) $
-                       (recur-ok-or-end :git-check $ "Failed to acquire the lock"))
-       :git-check (as-> (step-fn {:f git/check
-                                  :step step
-                                  :opts opts}) $
-                    (recur-ok-or-end :run-cmd $ "The working directory is not clean"))
-       :run-cmd (as-> (step-fn {:f run-cmd
-                                :step step
-                                :opts opts}) $
-                  (recur-ok-or-end :git-push $ "The command executed with the lock failed"))
-       :git-push (as-> (step-fn {:f git-push
-                                 :step step
-                                 :opts opts}) $
-                   (recur-ok-or-end :lock-release-any-owner $))
-       :lock-release-any-owner (as-> (step-fn {:f lock/release-any-owner
-                                               :step step
-                                               :opts opts}) $
-                                 (recur-ok-or-end :end $ "Failed to release the lock"))
-       :end (step-fn {:f identity
-                      :step step
-                      :opts opts})))))
+     (let [[f next-step err-msg] (case step
+                                   :lock-acquire [lock/acquire :git-check "Failed to acquire the lock"]
+                                   :git-check [git/check :run-cmd "The working directory is not clean"]
+                                   :run-cmd [run-cmd :git-push "The command executed with the lock failed"]
+                                   :git-push [git-push :lock-release-any-owner nil]
+                                   :lock-release-any-owner [lock/release-any-owner :end "Failed to release the lock"]
+                                   :end [identity nil])]
+       (as-> (step-fn {:f f
+                       :step step
+                       :opts opts}) $
+         (if next-step
+           (recur-ok-or-end next-step $ err-msg)
+           $))))))
 
 (defn generate-main-tf-json [opts]
   (let [{:keys [fn ns working-dir]} opts
@@ -81,23 +70,21 @@
 
 (defn run
   ([opts]
-   (run opts default-step-fn))
-  ([opts step-fn]
+   (run default-step-fn opts))
+  ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :generate-main-tf-json
           opts opts]
-     (case step
-       :generate-main-tf-json (as-> (step-fn {:f generate-main-tf-json
-                                              :step step
-                                              :opts opts}) $
-                                (recur-ok-or-end :run-cmd $))
-       :run-cmd (as-> (step-fn {:f run-cmd
-                                :step step
-                                :opts opts}) $
-                  (recur-ok-or-end :end $))
-       :end (step-fn {:f identity
-                      :step step
-                      :opts opts})))))
+     (let [[f next-step] (case step
+                           :generate-main-tf-json [generate-main-tf-json :run-cmd]
+                           :run-cmd [run-cmd :end]
+                           :end [identity nil])]
+       (as-> (step-fn {:f f
+                       :step step
+                       :opts opts}) $
+         (if next-step
+           (recur-ok-or-end next-step $)
+           $))))))
 
 (defn env-step-fn [{:keys [f step opts]}]
   (when (not= step :end)
@@ -114,12 +101,12 @@
   (as-> (read-module cmd module profile) $
     (assoc $ :env (or env :shell))
     (case cmd
-      (:init :plan) (run $ env-step-fn)
+      (:init :plan) (run env-step-fn $)
       :lock (do (println-step-fn :lock-acquire)
                 (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
       :unlock-any (do (println-step-fn :lock-release-any-owner)
                       (lock/release-any-owner $))
-      (:apply :destroy) (run-with-lock $ env-step-fn))))
+      (:apply :destroy) (run-with-lock env-step-fn $))))
 
 (comment
   (-> (tofu {:args [:init :module-a :dev]

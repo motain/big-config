@@ -84,8 +84,8 @@
 
 (defn acquire
   ([opts]
-   (acquire opts default-step-fn))
-  ([opts step-fn]
+   (acquire default-step-fn opts))
+  ([step-fn opts]
    (loop [step :generate-lock-id
           opts opts]
      (case step
@@ -123,8 +123,8 @@
 
 (defn release-any-owner
   ([opts]
-   (release-any-owner opts default-step-fn))
-  ([opts step-fn]
+   (release-any-owner default-step-fn opts))
+  ([step-fn opts]
    (loop [step :generate-lock-id
           opts opts]
      (case step

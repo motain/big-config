@@ -11,4 +11,5 @@
                    :fn "invoke"
                    :owner "CI"
                    :lock-keys [:aws-account-id :region :ns]
-                   :run-cmd "true"})
+                   :run-cmd "true"
+                   :env :repl})

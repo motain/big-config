@@ -30,41 +30,25 @@
 
 (defn check
   ([opts]
-   (check opts default-step-fn))
-  ([opts step-fn]
+   (check default-step-fn opts))
+  ([step-fn opts]
+   #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step :git-diff
           opts opts]
-     (case step
-       :git-diff (as-> (step-fn {:f git-diff
-                                 :step step
-                                 :opts opts}) $
-                   (recur-ok-or-end :fetch-origin $))
-       :fetch-origin (as-> (step-fn {:f fetch-origin
-                                     :step step
-                                     :opts opts}) $
-                       (recur-ok-or-end :upstream-name $))
-       :upstream-name (as-> (step-fn {:f (partial upstream-name :upstream-name)
-                                      :step step
-                                      :opts opts}) $
-                        (recur-ok-or-end :prev-revision $))
-       :prev-revision (as-> (step-fn {:f (partial get-revision "HEAD~1" :prev-revision)
-                                      :step step
-                                      :opts opts}) $
-                        (recur-ok-or-end :current-revision $))
-       :current-revision (as-> (step-fn {:f (partial get-revision "HEAD" :current-revision)
-                                         :step step
-                                         :opts opts}) $
-                           (recur-ok-or-end :origin-revision $))
-       :origin-revision (as-> (step-fn {:f (partial get-revision (:upstream-name opts) :origin-revision)
-                                        :step step
-                                        :opts opts}) $
-                          (recur-ok-or-end :compare-revisions $))
-       :compare-revisions (as-> (step-fn {:f compare-revisions
-                                          :step step
-                                          :opts opts}) $
-                            (recur :end $))
-       :end (step-fn {:f identity
-                      :step step
-                      :opts opts})))))
+     (let [[f next-step] (case step
+                           :git-diff [git-diff :fetch-origin]
+                           :fetch-origin [fetch-origin :upstream-name]
+                           :upstream-name [(partial upstream-name :upstream-name) :pre-revision]
+                           :pre-revision [(partial get-revision "HEAD~1" :prev-revision) :current-revision]
+                           :current-revision [(partial get-revision "HEAD" :current-revision) :origin-revision]
+                           :origin-revision [(partial get-revision (:upstream-name opts) :origin-revision) :compare-revisions]
+                           :compare-revisions [compare-revisions :end]
+                           :end [identity nil])]
+       (as-> (step-fn {:f f
+                       :step step
+                       :opts opts}) $
+         (if next-step
+           (recur-ok-or-end next-step $)
+           $))))))
 
 (comment)

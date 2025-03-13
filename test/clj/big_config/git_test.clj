@@ -9,5 +9,5 @@
     (let [opts {}
           xs (atom [])
           step-fn (partial test-step-fn xs)]
-      (check opts step-fn)
+      (check step-fn opts)
       (is (every? #(= (:exit %) 0) @xs)))))
