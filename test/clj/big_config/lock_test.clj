@@ -1,6 +1,6 @@
 (ns big-config.lock-test
   (:require
-   [big-config.lock :refer [acquire release-any-owner]]
+   [big-config.lock :as lock :refer [lock unlock-any]]
    [big-config.utils-test :refer [default-opts test-step-fn]]
    [clojure.test :refer [deftest is testing]]))
 
@@ -8,8 +8,8 @@
   (testing "acquire and release lock"
     (let [opts default-opts
           xs (atom [])
-          step-fn (partial test-step-fn xs)]
-      (acquire opts step-fn)
-      (release-any-owner opts step-fn)
-      (release-any-owner opts step-fn)
+          step-fn (partial test-step-fn ::lock/end xs)]
+      (lock step-fn opts)
+      (unlock-any step-fn opts)
+      (unlock-any step-fn opts)
       (is (every? #(= (:exit %) 0) @xs)))))

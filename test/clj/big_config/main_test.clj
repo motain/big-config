@@ -1,6 +1,7 @@
 (ns big-config.main-test
   (:require
    [big-config.main :refer [run-with-lock]]
+   [big-config.run-with-lock :as rwl]
    [big-config.utils-test :refer [default-opts test-step-fn]]
    [clojure.test :refer [deftest is testing]]))
 
@@ -8,7 +9,7 @@
   (testing "false, conflict, success, different owner"
     (let [opts    default-opts
           xs      (atom [])
-          step-fn (partial test-step-fn xs)]
+          step-fn (partial test-step-fn ::rwl/end xs)]
       (run-with-lock step-fn (assoc opts :run-cmd "false"))
       (run-with-lock step-fn (assoc opts :owner "CI2"))
       (run-with-lock step-fn opts)

@@ -1,6 +1,6 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [default-step-fn generic-cmd recur-ok-or-end]]))
+   [big-config.utils :refer [default-step-fn generic-cmd recur!]]))
 
 (defn get-revision [revision key opts]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -33,22 +33,22 @@
    (check default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step :git-diff
+   (loop [step ::git-diff
           opts opts]
      (let [[f next-step] (case step
-                           :git-diff [git-diff :fetch-origin]
-                           :fetch-origin [fetch-origin :upstream-name]
-                           :upstream-name [(partial upstream-name :upstream-name) :pre-revision]
-                           :pre-revision [(partial get-revision "HEAD~1" :prev-revision) :current-revision]
-                           :current-revision [(partial get-revision "HEAD" :current-revision) :origin-revision]
-                           :origin-revision [(partial get-revision (:upstream-name opts) :origin-revision) :compare-revisions]
-                           :compare-revisions [compare-revisions :end]
-                           :end [identity nil])]
+                           ::git-diff [git-diff ::fetch-origin]
+                           ::fetch-origin [fetch-origin ::upstream-name]
+                           ::upstream-name [(partial upstream-name :upstream-name) ::pre-revision]
+                           ::pre-revision [(partial get-revision "HEAD~1" :prev-revision) ::current-revision]
+                           ::current-revision [(partial get-revision "HEAD" :current-revision) ::origin-revision]
+                           ::origin-revision [(partial get-revision (:upstream-name opts) :origin-revision) ::compare-revisions]
+                           ::compare-revisions [compare-revisions ::end]
+                           ::end [identity nil])]
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur-ok-or-end next-step $)
+           (recur! next-step ::end $)
            $))))))
 
 (comment)

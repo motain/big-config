@@ -3,9 +3,10 @@
    [aero.core :as aero]
    [big-config.git :as git]
    [big-config.lock :as lock]
+   [big-config.run :as run]
+   [big-config.run-with-lock :as rwl]
    [big-config.utils :refer [default-step-fn exit-end-fn generic-cmd
-                             println-step-fn recur-ok-or-end run-cmd
-                             step->message]]
+                             println-step-fn recur! run-cmd step->message]]
    [cheshire.core :as json]
    [clojure.string :as str]))
 
@@ -36,20 +37,20 @@
    (run-with-lock default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step :lock-acquire
+   (loop [step ::rwl/lock-acquire
           opts opts]
      (let [[f next-step err-msg] (case step
-                                   :lock-acquire [lock/acquire :git-check "Failed to acquire the lock"]
-                                   :git-check [git/check :run-cmd "The working directory is not clean"]
-                                   :run-cmd [run-cmd :git-push "The command executed with the lock failed"]
-                                   :git-push [git-push :lock-release-any-owner nil]
-                                   :lock-release-any-owner [lock/release-any-owner :end "Failed to release the lock"]
-                                   :end [identity nil])]
+                                   ::rwl/lock-acquire [lock/lock ::rwl/git-check "Failed to acquire the lock"]
+                                   ::rwl/git-check [git/check ::rwl/run-cmd "The working directory is not clean"]
+                                   ::rwl/run-cmd [run-cmd ::rwl/git-push "The command executed with the lock failed"]
+                                   ::rwl/git-push [git-push ::rwl/lock-release-any-owner nil]
+                                   ::rwl/lock-release-any-owner [lock/unlock-any ::rwl/end "Failed to release the lock"]
+                                   ::rwl/end [identity nil])]
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur-ok-or-end next-step $ err-msg)
+           (recur! next-step ::rwl/end $ err-msg)
            $))))))
 
 (defn generate-main-tf-json [opts]
@@ -73,28 +74,29 @@
    (run default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step :generate-main-tf-json
+   (loop [step ::run/generate-main-tf-json
           opts opts]
      (let [[f next-step] (case step
-                           :generate-main-tf-json [generate-main-tf-json :run-cmd]
-                           :run-cmd [run-cmd :end]
-                           :end [identity nil])]
+                           ::run/generate-main-tf-json [generate-main-tf-json ::run/run-cmd]
+                           ::run/run-cmd [run-cmd ::run/end]
+                           ::run/end [identity nil])]
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur-ok-or-end next-step $)
+           (recur! next-step ::run/end $)
            $))))))
 
 (defn env-step-fn [{:keys [f step opts]}]
-  (when (not= step :end)
-    (println (step->message step)))
-  (let [new-opts (default-step-fn {:f f
-                                   :step step
-                                   :opts opts})]
-    (when (= step :end)
-      (exit-end-fn new-opts))
-    new-opts))
+  (let [step-name (name step)]
+    (when (not= step-name "end")
+      (println (step->message step)))
+    (let [new-opts (default-step-fn {:f f
+                                     :step step
+                                     :opts opts})]
+      (when (= step-name "end")
+        (exit-end-fn new-opts))
+      new-opts)))
 
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env}]
@@ -103,9 +105,9 @@
     (case cmd
       (:init :plan) (run env-step-fn $)
       :lock (do (println-step-fn :lock-acquire)
-                (lock/acquire $ (partial exit-end-fn "Failed to acquire the lock")))
+                (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
       :unlock-any (do (println-step-fn :lock-release-any-owner)
-                      (lock/release-any-owner $))
+                      (lock/unlock-any $))
       (:apply :destroy) (run-with-lock env-step-fn $))))
 
 (comment

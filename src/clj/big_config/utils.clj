@@ -1,6 +1,7 @@
 (ns big-config.utils
   (:require
    [babashka.process :as process]
+   [big-config.run :as run]
    [clojure.string :as str]
    [com.bunimo.clansi :as clansi :refer [style]]))
 
@@ -9,14 +10,10 @@
   (flush)
   (System/exit n))
 
-(defn handle-last-cmd [opts]
-  (let [{:keys [cmd-results]} opts]
-    (last cmd-results)))
-
-(defmacro recur-ok-or-end
-  ([key opts]
-   `(recur-ok-or-end ~key ~opts nil))
-  ([key opts msg]
+(defmacro recur!
+  ([key end opts]
+   `(recur! ~key ~end ~opts nil))
+  ([key end opts msg]
    `(let [exit# (:exit ~opts)
           err# (:err ~opts)
           msg# (if ~msg
@@ -24,13 +21,12 @@
                  err#)]
       (if (= exit# 0)
         (recur ~key ~opts)
-        (recur :end (assoc ~opts :err msg#))))))
+        (recur ~end (assoc ~opts :err msg#))))))
 
-(defmacro recur-not-ok-or-end [key opts]
-  `(let [proc# (handle-last-cmd ~opts)
-         exit# (get proc# :exit)]
+(defmacro not-recur! [key end opts]
+  `(let [exit# (:exit ~opts)]
      (if (= exit# 0)
-       (recur :end ~opts)
+       (recur ~end ~opts)
        (recur ~key ~opts))))
 
 (def default-opts {:continue true
@@ -78,10 +74,10 @@
     :else m))
 
 (defn step->message [step]
-  (let [messages {:generate-main-tf-json "Generating the main.tf.json file"
+  (let [messages {::run/generate-main-tf-json "Generating the main.tf.json file"
                   :lock-release-any-owner "Releasing lock"
                   :git-check "Checking if there are files not in the index"
-                  :run-cmd "Running the tofu command"
+                  ::run/run-cmd "Running the tofu command"
                   :git-push "Pushing the changes to git"
                   :lock-acquire "Acquiring lock"}]
     (as-> step $

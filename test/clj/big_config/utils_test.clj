@@ -1,9 +1,13 @@
-(ns big-config.utils-test)
+(ns big-config.utils-test
+  (:require
+   [big-config.utils :refer [default-step-fn]]))
 
-(defn test-step-fn [xs {:keys [f step opts]}]
-  (when (= step :end)
+(defn test-step-fn [end-step xs {:keys [f step opts]}]
+  (when (= step end-step)
     (swap! xs conj opts))
-  (f opts))
+  (default-step-fn {:f f
+                    :step step
+                    :opts opts}))
 
 (def default-opts {:aws-account-id "111111111111"
                    :region "eu-west-1"
