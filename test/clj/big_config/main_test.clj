@@ -28,6 +28,6 @@
           xs      (atom [])
           step-fn (partial catch-all-step-fn xs)]
       (run-with-lock step-fn opts)
-      (is (= 12 (count @xs)))
+      (is (= 48 (count @xs)))
       (is (every? (fn [x] (or (keyword? x)
                               (map? x))) @xs)))))

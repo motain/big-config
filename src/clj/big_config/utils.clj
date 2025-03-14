@@ -11,24 +11,16 @@
   (flush)
   (System/exit n))
 
-(defmacro recur!
-  ([key end opts]
-   `(recur! ~key ~end ~opts nil))
-  ([key end opts msg]
+(defmacro choice
+  ([{:keys [on-success on-failure opts errmsg]}]
    `(let [exit# (:exit ~opts)
           err# (:err ~opts)
-          msg# (if ~msg
-                 ~msg
+          msg# (if ~errmsg
+                 ~errmsg
                  err#)]
       (if (= exit# 0)
-        (recur ~key ~opts)
-        (recur ~end (assoc ~opts :err msg#))))))
-
-(defmacro not-recur! [key end opts]
-  `(let [exit# (:exit ~opts)]
-     (if (= exit# 0)
-       (recur ~end ~opts)
-       (recur ~key ~opts))))
+        (recur ~on-success ~opts)
+        (recur ~on-failure (assoc ~opts :err msg#))))))
 
 (def default-opts {:continue true
                    :out :string

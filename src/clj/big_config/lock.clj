@@ -2,8 +2,8 @@
   (:require
    [babashka.process :as process]
    [big-config.unlock :as unlock]
-   [big-config.utils :as utils :refer [default-step-fn generic-cmd handle-cmd
-                                       nested-sort-map not-recur! recur!]]
+   [big-config.utils :as utils :refer [choice default-step-fn generic-cmd
+                                       handle-cmd nested-sort-map]]
    [buddy.core.codecs :as codecs]
    [buddy.core.hash :as hash]
    [clojure.edn :as edn]
@@ -101,11 +101,15 @@
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
-         (case next-step
-           nil $
-           ::get-remote-tag (not-recur! ::get-remote-tag ::end $)
-           ::create-tag (recur ::create-tag $)
-           (recur! next-step ::end $)))))))
+         (case step
+           ::end $
+           ::push-tag (choice {:on-success ::end
+                               :on-failure next-step
+                               :opts $})
+           ::delete-tag (recur next-step $)
+           (choice {:on-success next-step
+                    :on-failure ::end
+                    :opts $})))))))
 
 (defn unlock-any
   ([opts]

@@ -5,8 +5,8 @@
    [big-config.lock :as lock]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
-   [big-config.utils :refer [default-step-fn exit-end-fn generic-cmd
-                             println-step-fn recur! run-cmd step->message]]
+   [big-config.utils :refer [choice default-step-fn exit-end-fn generic-cmd
+                             println-step-fn run-cmd step->message]]
    [cheshire.core :as json]
    [clojure.string :as str]))
 
@@ -39,18 +39,21 @@
    #_{:clj-kondo/ignore [:loop-without-recur]}
    (loop [step ::rwl/lock-acquire
           opts opts]
-     (let [[f next-step err-msg] (case step
-                                   ::rwl/lock-acquire [(partial lock/lock step-fn) ::rwl/git-check "Failed to acquire the lock"]
-                                   ::rwl/git-check [(partial git/check step-fn) ::rwl/run-cmd "The working directory is not clean"]
-                                   ::rwl/run-cmd [run-cmd ::rwl/git-push "The command executed with the lock failed"]
-                                   ::rwl/git-push [git-push ::rwl/lock-release-any-owner nil]
-                                   ::rwl/lock-release-any-owner [(partial lock/unlock-any step-fn) ::rwl/end "Failed to release the lock"]
-                                   ::rwl/end [identity nil])]
+     (let [[f next-step errmsg] (case step
+                                  ::rwl/lock-acquire [(partial lock/lock step-fn) ::rwl/git-check "Failed to acquire the lock"]
+                                  ::rwl/git-check [(partial git/check step-fn) ::rwl/run-cmd "The working directory is not clean"]
+                                  ::rwl/run-cmd [run-cmd ::rwl/git-push "The command executed with the lock failed"]
+                                  ::rwl/git-push [git-push ::rwl/lock-release-any-owner nil]
+                                  ::rwl/lock-release-any-owner [(partial lock/unlock-any step-fn) ::rwl/end "Failed to release the lock"]
+                                  ::rwl/end [identity nil])]
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur! next-step ::rwl/end $ err-msg)
+           (choice {:on-success next-step
+                    :on-failure ::rwl/end
+                    :errmsg errmsg
+                    :opts $})
            $))))))
 
 (defn generate-main-tf-json [opts]
@@ -84,7 +87,9 @@
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur! next-step ::run/end $)
+           (choice {:on-success next-step
+                    :on-failure ::run/end
+                    :opts $})
            $))))))
 
 (defn run-step-fn [end {:keys [f step opts]}]

@@ -1,6 +1,6 @@
 (ns big-config.git
   (:require
-   [big-config.utils :refer [default-step-fn generic-cmd recur!]]))
+   [big-config.utils :refer [choice default-step-fn generic-cmd]]))
 
 (defn get-revision [revision key opts]
   (let [cmd (format "git rev-parse %s" revision)]
@@ -48,7 +48,9 @@
                        :step step
                        :opts opts}) $
          (if next-step
-           (recur! next-step ::end $)
+           (choice {:on-success next-step
+                    :on-failure ::end
+                    :opts $})
            $))))))
 
 (comment)
