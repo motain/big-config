@@ -40,11 +40,11 @@
    (loop [step ::rwl/lock-acquire
           opts opts]
      (let [[f next-step err-msg] (case step
-                                   ::rwl/lock-acquire [lock/lock ::rwl/git-check "Failed to acquire the lock"]
-                                   ::rwl/git-check [git/check ::rwl/run-cmd "The working directory is not clean"]
+                                   ::rwl/lock-acquire [(partial lock/lock step-fn) ::rwl/git-check "Failed to acquire the lock"]
+                                   ::rwl/git-check [(partial git/check step-fn) ::rwl/run-cmd "The working directory is not clean"]
                                    ::rwl/run-cmd [run-cmd ::rwl/git-push "The command executed with the lock failed"]
                                    ::rwl/git-push [git-push ::rwl/lock-release-any-owner nil]
-                                   ::rwl/lock-release-any-owner [lock/unlock-any ::rwl/end "Failed to release the lock"]
+                                   ::rwl/lock-release-any-owner [(partial lock/unlock-any step-fn) ::rwl/end "Failed to release the lock"]
                                    ::rwl/end [identity nil])]
        (as-> (step-fn {:f f
                        :step step
@@ -87,14 +87,14 @@
            (recur! next-step ::run/end $)
            $))))))
 
-(defn env-step-fn [{:keys [f step opts]}]
-  (let [step-name (name step)]
-    (when (not= step-name "end")
-      (println (step->message step)))
+(defn run-step-fn [end {:keys [f step opts]}]
+  (let [msg (step->message step)]
+    (when msg
+      (println msg))
     (let [new-opts (default-step-fn {:f f
                                      :step step
                                      :opts opts})]
-      (when (= step-name "end")
+      (when (= step end)
         (exit-end-fn new-opts))
       new-opts)))
 
@@ -103,12 +103,12 @@
   (as-> (read-module cmd module profile) $
     (assoc $ :env (or env :shell))
     (case cmd
-      (:init :plan) (run env-step-fn $)
+      (:init :plan) (run (partial run-step-fn ::run/end) $)
       :lock (do (println-step-fn :lock-acquire)
                 (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
       :unlock-any (do (println-step-fn :lock-release-any-owner)
                       (lock/unlock-any $))
-      (:apply :destroy) (run-with-lock env-step-fn $))))
+      (:apply :destroy) (run-with-lock (partial run-step-fn ::rwl/end) $))))
 
 (comment
   (-> (tofu {:args [:init :module-a :dev]

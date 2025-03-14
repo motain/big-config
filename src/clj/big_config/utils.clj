@@ -2,6 +2,7 @@
   (:require
    [babashka.process :as process]
    [big-config.run :as run]
+   [big-config.run-with-lock :as rwl]
    [clojure.string :as str]
    [com.bunimo.clansi :as clansi :refer [style]]))
 
@@ -75,14 +76,15 @@
 
 (defn step->message [step]
   (let [messages {::run/generate-main-tf-json "Generating the main.tf.json file"
-                  :lock-release-any-owner "Releasing lock"
-                  :git-check "Checking if there are files not in the index"
                   ::run/run-cmd "Running the tofu command"
-                  :git-push "Pushing the changes to git"
-                  :lock-acquire "Acquiring lock"}]
-    (as-> step $
-      (get messages $)
-      (clansi/style $ :green))))
+                  ::rwl/lock-acquire "Acquiring lock"
+                  ::rwl/git-check "Checking if there are files not in the index"
+                  ::rwl/run-cmd "Running the tofu command"
+                  ::rwl/git-push "Pushing the changes to git"
+                  ::rwl/lock-release-any-owner "Releasing lock"}
+        msg (step messages)]
+    (when msg
+      (clansi/style msg :green))))
 
 (defn println-step-fn
   ([step]
@@ -107,7 +109,7 @@
   ([err-msg opts]
    (let [{:keys [exit env err]} opts
          err (or err-msg err)]
-     (when-not (= exit 0)
+     (when (and (not= exit 0) (string? err))
        (println (style err :red)))
      (case env
        :shell (exit-with-code exit)
