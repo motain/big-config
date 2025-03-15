@@ -1,5 +1,6 @@
 (ns com.bunimo.clansi
-  (:require [clojure.string :as str]))
+  (:require
+   [clojure.string :as str]))
 
 (def ATTRIBUTES (atom {:error [4 91 40]
                        :clear 0

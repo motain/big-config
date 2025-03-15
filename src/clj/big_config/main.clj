@@ -39,16 +39,18 @@
       new-opts)))
 
 (defn ^:export tofu [{[cmd module profile] :args
-                      env :env}]
-  (as-> (read-module cmd module profile) $
-    (assoc $ ::bc/env (or env :shell))
-    (case cmd
-      (:init :plan)     (run/run (partial run-step-fn ::run/end) $)
-      :lock             (do (println-step-fn :lock-acquire)
-                            (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
-      :unlock-any       (do (println-step-fn :lock-release-any-owner)
-                            (unlock/unlock-any $))
-      (:apply :destroy) (rwl/run-with-lock (partial run-step-fn ::rwl/end) $))))
+                      env :env
+                      step-fn :step-fn}]
+  (let [step-fn (or step-fn run-step-fn)]
+    (as-> (read-module cmd module profile) $
+      (assoc $ ::bc/env (or env :shell))
+      (case cmd
+        (:init :plan)     (run/run (partial step-fn ::run/end) $)
+        :lock             (do (println-step-fn :lock-acquire)
+                              (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
+        :unlock-any       (do (println-step-fn :lock-release-any-owner)
+                              (unlock/unlock-any $))
+        (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) $)))))
 
 (comment
   (-> (tofu {:args [:init :module-a :dev]

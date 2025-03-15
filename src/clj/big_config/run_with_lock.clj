@@ -2,6 +2,7 @@
   (:require
    [big-config.git :refer [check]]
    [big-config.lock :refer [lock]]
+   [big-config.run :refer [generate-main-tf-json]]
    [big-config.unlock :refer [unlock-any]]
    [big-config.utils :refer [choice default-step-fn git-push run-cmd]]))
 
@@ -14,7 +15,8 @@
           opts opts]
      (let [[f next-step errmsg] (case step
                                   ::lock-acquire [(partial lock step-fn) ::git-check "Failed to acquire the lock"]
-                                  ::git-check [(partial check step-fn) ::run-cmd "The working directory is not clean"]
+                                  ::git-check [(partial check step-fn) ::generate-main-tf-json "The working directory is not clean"]
+                                  ::generate-main-tf-json [generate-main-tf-json ::run-cmd "Failed to generate the main.tf.json"]
                                   ::run-cmd [run-cmd ::git-push "The command executed with the lock failed"]
                                   ::git-push [git-push ::lock-release-any-owner nil]
                                   ::lock-release-any-owner [(partial unlock-any step-fn) ::end "Failed to release the lock"]
