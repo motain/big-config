@@ -6,6 +6,7 @@
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.utils :refer [default-step-fn exit-end-fn]]
+   [big-config :as bc]
    [clojure.string :as str]))
 
 (defn resolve-array [config key xs]
@@ -39,7 +40,7 @@
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env}]
   (as-> (read-module cmd module profile) $
-    (assoc $ :env (or env :shell))
+    (assoc $ ::bc/env (or env :shell))
     (case cmd
       (:init :plan)     (run/run (partial run-step-fn ::run/end) $)
       :lock             (do (println-step-fn :lock-acquire)

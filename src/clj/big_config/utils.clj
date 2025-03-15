@@ -1,6 +1,7 @@
 (ns big-config.utils
   (:require
    [babashka.process :as process]
+   [big-config :as bc]
    [clojure.string :as str]
    [com.bunimo.clansi :as clansi :refer [style]]))
 
@@ -68,7 +69,7 @@
   (generic-cmd opts "git push"))
 
 (defn run-cmd [opts]
-  (let [{:keys [env run-cmd]} opts
+  (let [{:keys [::bc/env run-cmd]} opts
         shell-opts {:continue true}
         shell-opts (case env
                      :shell shell-opts
@@ -81,7 +82,7 @@
   ([opts]
    (exit-end-fn nil opts))
   ([err-msg opts]
-   (let [{:keys [exit env err]} opts
+   (let [{:keys [exit ::bc/env err]} opts
          err (or err-msg err)]
      (when (and (not= exit 0) (string? err))
        (println (style err :red)))

@@ -1,5 +1,6 @@
 (ns big-config.utils-test
   (:require
+   [big-config :as bc]
    [big-config.utils :refer [default-step-fn]]))
 
 (defn test-step-fn [end-steps xs {:keys [f step opts]}]
@@ -16,4 +17,4 @@
                    :owner "CI"
                    :lock-keys [:aws-account-id :region :ns]
                    :run-cmd "true"
-                   :env :repl})
+                   ::bc/env :repl})
