@@ -1,6 +1,7 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
+   [big-config :as bc]
    [big-config.utils :as utils :refer [choice default-step-fn generic-cmd
                                        handle-cmd nested-sort-map]]
    [clojure.edn :as edn]
@@ -18,8 +19,8 @@
         (assoc :lock-details lock-details)
         (update :lock-details assoc :owner owner)
         (merge {:lock-name lock-name
-                :exit 0
-                :err nil}))))
+                ::bc/exit 0
+                ::bc/err nil}))))
 
 (defn delete-tag [opts]
   (let [{:keys [lock-name]} opts]
@@ -64,17 +65,20 @@
                             (= (get opts k) v))
                           (parse-tag-content tag-content))]
     (merge opts (if ownership
-                  {:exit 0
-                   :err nil}
-                  {:exit 1
-                   :err "Different owner"}))))
+                  {::bc/exit 0
+                   ::bc/err nil}
+                  {::bc/exit 1
+                   ::bc/err "Different owner"}))))
 
 (defn check-remote-tag [opts]
   (let [{:keys [lock-name]} opts
         cmd (format "git ls-remote --exit-code origin  refs/tags/%s" lock-name)
-        {:keys [exit] :as opts} (generic-cmd opts cmd)]
-    (when (= exit 2)
-      (assoc opts :exit 0))))
+        {:keys [::bc/exit ::bc/err] :as opts} (generic-cmd opts cmd)]
+    (merge opts (if (= exit 2)
+                  {::bc/exit 0
+                   ::bc/err nil}
+                  {::bc/exit 1
+                   ::bc/err err}))))
 
 (defn lock
   ([opts]

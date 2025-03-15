@@ -1,23 +1,27 @@
 (ns big-config.run
   (:require
+   [big-config :as bc]
    [big-config.utils :refer [choice default-step-fn run-cmd]]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]
-  (let [{:keys [fn ns working-dir]} opts
+  (let [{:keys [::bc/test-mode fn ns working-dir]} opts
         f (str working-dir "/main.tf.json")]
-    (try
-      (-> (format "%s/%s" ns fn)
-          (symbol)
-          requiring-resolve
-          (apply (vector opts))
-          (json/generate-string {:pretty true})
-          (->> (spit f))
-          (merge opts {:exit 0
-                       :err nil}))
-      (catch Exception e
-        (merge opts {:exit 1
-                     :err (pr-str e)})))))
+    (if test-mode
+      (merge opts {::bc/exit 0
+                   ::bc/err nil})
+      (try
+        (-> (format "%s/%s" ns fn)
+            (symbol)
+            requiring-resolve
+            (apply (vector opts))
+            (json/generate-string {:pretty true})
+            (->> (spit f))
+            (merge opts {::bc/exit 0
+                         ::bc/err nil}))
+        (catch Exception e
+          (merge opts {::bc/exit 1
+                       ::bc/err (pr-str e)}))))))
 
 (defn run
   ([opts]

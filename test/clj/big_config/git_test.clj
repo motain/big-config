@@ -1,5 +1,6 @@
 (ns big-config.git-test
   (:require
+   [big-config :as bc]
    [big-config.git :as git :refer [check]]
    [big-config.utils-test :refer [test-step-fn]]
    [clojure.test :refer [deftest is testing]]))
@@ -10,4 +11,4 @@
           xs (atom [])
           step-fn (partial test-step-fn #{::git/end} xs)]
       (check step-fn opts)
-      (is (every? #(= (:exit %) 0) @xs)))))
+      (is (every? #(= (::bc/exit %) 0) @xs)))))

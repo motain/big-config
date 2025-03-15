@@ -16,7 +16,7 @@
      (let [[f next-step errmsg] (case step
                                   ::lock-acquire [(partial lock step-fn) ::git-check "Failed to acquire the lock"]
                                   ::git-check [(partial check step-fn) ::generate-main-tf-json "The working directory is not clean"]
-                                  ::generate-main-tf-json [generate-main-tf-json ::run-cmd "Failed to generate the main.tf.json"]
+                                  ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
                                   ::run-cmd [run-cmd ::git-push "The command executed with the lock failed"]
                                   ::git-push [git-push ::lock-release-any-owner nil]
                                   ::lock-release-any-owner [(partial unlock-any step-fn) ::end "Failed to release the lock"]

@@ -1,5 +1,6 @@
 (ns big-config.git
   (:require
+   [big-config :as bc]
    [big-config.utils :refer [choice default-step-fn generic-cmd]]))
 
 (defn get-revision [revision key opts]
@@ -23,10 +24,10 @@
         res (or (= prev-revision origin-revision)
                 (= current-revision origin-revision))]
     (merge opts (if res
-                  {:exit 0
-                   :err nil}
-                  {:exit 1
-                   :err "The local revisions don't match the remote revision"}))))
+                  {::bc/exit 0
+                   ::bc/err nil}
+                  {::bc/exit 1
+                   ::bc/err "The local revisions don't match the remote revision"}))))
 
 (defn check
   ([opts]

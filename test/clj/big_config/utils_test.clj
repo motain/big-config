@@ -17,4 +17,5 @@
                    :owner "CI"
                    :lock-keys [:aws-account-id :region :ns]
                    :run-cmd "true"
+                   ::bc/test-mode true
                    ::bc/env :repl})

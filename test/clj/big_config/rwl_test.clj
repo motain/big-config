@@ -1,5 +1,6 @@
 (ns big-config.rwl-test
   (:require
+   [big-config :as bc]
    [big-config.run-with-lock :as rwl :refer [run-with-lock]]
    [big-config.utils-test :refer [default-opts test-step-fn]]
    [clojure.test :refer [deftest is testing]]))
@@ -14,7 +15,7 @@
       (run-with-lock step-fn opts)
       (run-with-lock step-fn (assoc opts :owner "CI2"))
       (as-> @xs $
-        (map :exit $)
+        (map ::bc/exit $)
         (is (= [1 1 0 0] $))))))
 
 (defn catch-all-step-fn [xs {:keys [f step opts]}]
@@ -27,6 +28,6 @@
           xs      (atom [])
           step-fn (partial catch-all-step-fn xs)]
       (run-with-lock step-fn opts)
-      (is (= 48 (count @xs)))
+      (is (= 50 (count @xs)))
       (is (every? (fn [x] (or (keyword? x)
                               (map? x))) @xs)))))
