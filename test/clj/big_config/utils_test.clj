@@ -2,8 +2,8 @@
   (:require
    [big-config.utils :refer [default-step-fn]]))
 
-(defn test-step-fn [end-step xs {:keys [f step opts]}]
-  (when (= step end-step)
+(defn test-step-fn [end-steps xs {:keys [f step opts]}]
+  (when (end-steps step)
     (swap! xs conj opts))
   (default-step-fn {:f f
                     :step step

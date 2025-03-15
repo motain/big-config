@@ -8,7 +8,7 @@
   (testing "false, conflict, success, different owner"
     (let [opts    default-opts
           xs      (atom [])
-          step-fn (partial test-step-fn ::rwl/end xs)]
+          step-fn (partial test-step-fn #{::rwl/end} xs)]
       (run-with-lock step-fn (assoc opts :run-cmd "false"))
       (run-with-lock step-fn (assoc opts :owner "CI2"))
       (run-with-lock step-fn opts)

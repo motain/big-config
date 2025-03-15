@@ -8,6 +8,6 @@
   (testing "git check test"
     (let [opts {}
           xs (atom [])
-          step-fn (partial test-step-fn ::git/end xs)]
+          step-fn (partial test-step-fn #{::git/end} xs)]
       (check step-fn opts)
       (is (every? #(= (:exit %) 0) @xs)))))

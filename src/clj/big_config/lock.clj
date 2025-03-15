@@ -1,7 +1,6 @@
 (ns big-config.lock
   (:require
    [babashka.process :as process]
-   [big-config.unlock :as unlock]
    [big-config.utils :as utils :refer [choice default-step-fn generic-cmd
                                        handle-cmd nested-sort-map]]
    [buddy.core.codecs :as codecs]
@@ -110,25 +109,5 @@
            (choice {:on-success next-step
                     :on-failure ::end
                     :opts $})))))))
-
-(defn unlock-any
-  ([opts]
-   (unlock-any default-step-fn opts))
-  ([step-fn opts]
-   #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::unlock/generate-lock-id
-          opts opts]
-     (let [[f next-step] (case step
-                           ::unlock/generate-lock-id [generate-lock-id ::unlock/delete-tag]
-                           ::unlock/delete-tag [delete-tag ::unlock/delete-remote-tag]
-                           ::unlock/delete-remote-tag [delete-remote-tag ::unlock/check-remote-tag]
-                           ::unlock/check-remote-tag [check-remote-tag ::unlock/end]
-                           ::unlock/end [identity nil])]
-       (as-> (step-fn {:f f
-                       :step step
-                       :opts opts}) $
-         (if next-step
-           (recur next-step $)
-           $))))))
 
 (comment)
