@@ -3,8 +3,6 @@
    [babashka.process :as process]
    [big-config.utils :as utils :refer [choice default-step-fn generic-cmd
                                        handle-cmd nested-sort-map]]
-   [buddy.core.codecs :as codecs]
-   [buddy.core.hash :as hash]
    [clojure.edn :as edn]
    [clojure.string :as str]))
 
@@ -13,11 +11,8 @@
         lock-details (select-keys opts lock-keys)
         lock-name (-> lock-details
                       nested-sort-map
-                      pr-str
-                      hash/sha256
-                      codecs/bytes->hex
-                      str/upper-case
-                      (subs 0 4)
+                      hash
+                      (->> (format "%X"))
                       (as-> $ (str "LOCK-" $)))]
     (-> opts
         (assoc :lock-details lock-details)

@@ -4,7 +4,6 @@
            org.slf4j/slf4j-nop    {:mvn/version "2.0.17"}
            babashka/process       {:mvn/version "0.5.22"}
            aero/aero              {:mvn/version "1.1.6"}
-           buddy/buddy-core       {:mvn/version "1.12.0-430"}
            cheshire/cheshire      {:mvn/version "5.13.0"}
            com.bunimo/clansi      {:git/url "https://github.com/amiorin/clansi.git"
                                    :git/sha "94084e3cfb4ca7cf443478fe4ee1a97ae3acceb9"}}
