@@ -1,12 +1,13 @@
 (ns big-config.main
   (:require
    [aero.core :as aero]
+   [big-config :as bc]
    [big-config.lock :as lock]
    [big-config.msg :refer [println-step-fn step->message]]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
+   [big-config.unlock :as unlock]
    [big-config.utils :refer [default-step-fn exit-end-fn]]
-   [big-config :as bc]
    [clojure.string :as str]))
 
 (defn resolve-array [config key xs]
@@ -46,7 +47,7 @@
       :lock             (do (println-step-fn :lock-acquire)
                             (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
       :unlock-any       (do (println-step-fn :lock-release-any-owner)
-                            (lock/unlock-any $))
+                            (unlock/unlock-any $))
       (:apply :destroy) (rwl/run-with-lock (partial run-step-fn ::rwl/end) $))))
 
 (comment
