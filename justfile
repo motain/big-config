@@ -4,9 +4,7 @@ help:
 # clean before tofu init
 [group('tofu')]
 clean:
-    cd tofu/251213589273/eu-west-1 \
-    && rm -rf tofu.module-a.main \
-    && mkdir tofu.module-a.main
+    rm -rf tofu/251213589273/eu-west-1/tofu.module-a.main/.terraform/
 
 # check the AWS identity
 [group('tofu')]
