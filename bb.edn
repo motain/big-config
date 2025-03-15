@@ -1,0 +1,2 @@
+{:paths ["env/dev/clj"]
+ :deps {amiorin/big-config {:local/root "."}}}

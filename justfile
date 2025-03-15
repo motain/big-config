@@ -17,5 +17,6 @@ get-caller-identity aws-account-id:
 # tofu init|plan|apply|destroy|lock|unlock-any
 [group('tofu')]
 tofu cmd module profile:
-    @clj -X:dev big-config.main/tofu \
-      :args '[:{{ cmd }} :{{ module }} :{{ profile }}]'
+    #!/usr/bin/env bb
+    (require '[big-config.main :refer [tofu]])
+    (tofu {:args [:{{ cmd }} :{{ module }} :{{ profile }}]})
