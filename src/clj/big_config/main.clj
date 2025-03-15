@@ -3,7 +3,7 @@
    [aero.core :as aero]
    [big-config :as bc]
    [big-config.lock :as lock]
-   [big-config.msg :refer [println-step-fn step->message]]
+   [big-config.msg :refer [step->message]]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
@@ -46,10 +46,8 @@
       (assoc $ ::bc/env (or env :shell))
       (case cmd
         (:init :plan)     (run/run (partial step-fn ::run/end) $)
-        :lock             (do (println-step-fn :lock-acquire)
-                              (lock/lock $ (partial exit-end-fn "Failed to acquire the lock")))
-        :unlock-any       (do (println-step-fn :lock-release-any-owner)
-                              (unlock/unlock-any $))
+        :lock             (lock/lock (partial step-fn ::lock/end) $)
+        :unlock-any       (unlock/unlock-any (partial step-fn ::unlock/end) $)
         (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) $)))))
 
 (comment

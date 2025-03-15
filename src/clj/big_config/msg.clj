@@ -16,10 +16,3 @@
         msg (step messages)]
     (when msg
       (clansi/style msg :green))))
-
-(defn println-step-fn
-  ([step]
-   (println-step-fn step nil))
-  ([step _opts]
-   (when (not= :end step)
-     (println (step->message step)))))
