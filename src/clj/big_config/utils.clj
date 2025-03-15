@@ -85,7 +85,8 @@
    (let [{:keys [exit ::bc/env err]} opts
          err (or err-msg err)]
      (when (and (not= exit 0) (string? err))
-       (println (style err :red)))
+       (binding [*out* *err*]
+         (println (style err :red))))
      (case env
        :shell (exit-with-code exit)
        :repl opts))))

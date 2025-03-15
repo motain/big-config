@@ -30,7 +30,8 @@
 (defn run-step-fn [end {:keys [f step opts]}]
   (let [msg (step->message step)]
     (when msg
-      (println msg))
+      (binding [*out* *err*]
+        (println msg)))
     (let [new-opts (default-step-fn {:f f
                                      :step step
                                      :opts opts})]
