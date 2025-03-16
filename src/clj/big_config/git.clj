@@ -18,9 +18,9 @@
   (generic-cmd opts "git diff --quiet"))
 
 (defn compare-revisions [opts]
-  (let [{:keys [prev-revision
-                current-revision
-                origin-revision]} opts
+  (let [{:keys [::prev-revision
+                ::current-revision
+                ::origin-revision]} opts
         res (or (= prev-revision origin-revision)
                 (= current-revision origin-revision))]
     (merge opts (if res
@@ -39,10 +39,10 @@
      (let [[f next-step] (case step
                            ::git-diff [git-diff ::fetch-origin]
                            ::fetch-origin [fetch-origin ::upstream-name]
-                           ::upstream-name [(partial upstream-name :upstream-name) ::pre-revision]
-                           ::pre-revision [(partial get-revision "HEAD~1" :prev-revision) ::current-revision]
-                           ::current-revision [(partial get-revision "HEAD" :current-revision) ::origin-revision]
-                           ::origin-revision [(partial get-revision (:upstream-name opts) :origin-revision) ::compare-revisions]
+                           ::upstream-name [(partial upstream-name ::upstream-name) ::pre-revision]
+                           ::pre-revision [(partial get-revision "HEAD~1" ::prev-revision) ::current-revision]
+                           ::current-revision [(partial get-revision "HEAD" ::current-revision) ::origin-revision]
+                           ::origin-revision [(partial get-revision (::upstream-name opts) ::origin-revision) ::compare-revisions]
                            ::compare-revisions [compare-revisions ::end]
                            ::end [identity nil])]
        (as-> (step-fn {:f f
