@@ -19,12 +19,12 @@
 (defn read-module [cmd module profile]
   (let [config (-> (aero/read-config "big-config.edn" {:profile profile})
                    module
-                   (merge {:cmd cmd
-                           :module module
-                           :profile profile}))
-        {:keys [run-cmd working-dir]} config
-        config (resolve-array config :working-dir working-dir)
-        config (resolve-array config :run-cmd run-cmd)]
+                   (merge {::lock/cmd cmd
+                           ::lock/module module
+                           ::lock/profile profile}))
+        {:keys [::lock/run-cmd ::lock/working-dir]} config
+        config (resolve-array config ::lock/working-dir working-dir)
+        config (resolve-array config ::lock/run-cmd run-cmd)]
     config))
 
 (defn run-step-fn [end {:keys [f step opts]}]
@@ -52,5 +52,6 @@
         (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) $)))))
 
 (comment
-  (-> (tofu {:args [:init :module-a :dev]
-             :env :repl})))
+  (->> (tofu {:args [:init :module-a :dev]
+              :env :repl})
+       (into (sorted-map))))

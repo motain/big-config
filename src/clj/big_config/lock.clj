@@ -8,7 +8,7 @@
    [clojure.string :as str]))
 
 (defn generate-lock-id [opts]
-  (let [{:keys [lock-keys owner]} opts
+  (let [{:keys [::lock-keys ::owner]} opts
         lock-details (select-keys opts lock-keys)
         lock-name (-> lock-details
                       nested-sort-map
@@ -16,51 +16,51 @@
                       (->> (format "%X"))
                       (as-> $ (str "LOCK-" $)))]
     (-> opts
-        (assoc :lock-details lock-details)
-        (update :lock-details assoc :owner owner)
-        (merge {:lock-name lock-name
+        (assoc ::lock-details lock-details)
+        (update ::lock-details assoc ::owner owner)
+        (merge {::lock-name lock-name
                 ::bc/exit 0
                 ::bc/err nil}))))
 
 (defn delete-tag [opts]
-  (let [{:keys [lock-name]} opts]
+  (let [{:keys [::lock-name]} opts]
     (generic-cmd opts (format "git tag -d %s" lock-name))))
 
 (defn create-tag [opts]
-  (let [{:keys [lock-name
-                lock-details]} opts
+  (let [{:keys [::lock-name ::lock-details]} opts
         proc (-> (process/shell {:continue true
-                                 :in (pr-str lock-details)
+                                 :in (str ">>>" (pr-str lock-details))
                                  :out :string
                                  :err :string} (format "git tag -a %s -F -" lock-name)))]
     (handle-cmd opts proc)))
 
 (defn push-tag [opts]
-  (let [{:keys [lock-name]} opts]
+  (let [{:keys [::lock-name]} opts]
     (generic-cmd opts (format "git push origin %s" lock-name))))
 
 (defn delete-remote-tag [opts]
-  (let [{:keys [lock-name]} opts]
+  (let [{:keys [::lock-name]} opts]
     (generic-cmd opts (format "git push --delete origin %s" lock-name))))
 
 (defn get-remote-tag [opts]
-  (let [{:keys [lock-name]} opts]
+  (let [{:keys [::lock-name]} opts]
     (generic-cmd opts (format "git fetch origin tag %s --no-tags" lock-name))))
 
 (defn read-tag [opts]
-  (let [{:keys [lock-name]} opts
+  (let [{:keys [::lock-name]} opts
         cmd (format "git cat-file -p %s" lock-name)]
-    (generic-cmd opts cmd :tag-content)))
+    (generic-cmd opts cmd ::tag-content)))
 
 (defn parse-tag-content [tag-content]
-  (->> tag-content
-       str/split-lines
-       (filter #(str/starts-with? % "{"))
-       first
-       edn/read-string))
+  (-> tag-content
+      str/split-lines
+      (->> (filter #(str/starts-with? % ">>>")))
+      first
+      (str/replace-first ">>>" "")
+      edn/read-string))
 
 (defn check-tag [opts]
-  (let [{:keys [tag-content]} opts
+  (let [{:keys [::tag-content]} opts
         ownership (every? (fn [[k v]]
                             (= (get opts k) v))
                           (parse-tag-content tag-content))]
@@ -71,7 +71,7 @@
                    ::bc/err "Different owner"}))))
 
 (defn check-remote-tag [opts]
-  (let [{:keys [lock-name]} opts
+  (let [{:keys [::lock-name]} opts
         cmd (format "git ls-remote --exit-code origin  refs/tags/%s" lock-name)
         {:keys [::bc/exit ::bc/err] :as opts} (generic-cmd opts cmd)]
     (merge opts (if (= exit 2)

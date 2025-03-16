@@ -1,10 +1,12 @@
-(ns tofu.common.create-provider)
+(ns tofu.common.create-provider
+  (:require
+   [big-config.lock :as lock]))
 
 (defn invoke [opts]
-  (let [{:keys [region
-                bucket
-                module
-                aws-account-id]} opts
+  (let [{:keys [::lock/region
+                ::lock/bucket
+                ::lock/module
+                ::lock/aws-account-id]} opts
         key (str module ".tfstate")]
     {:provider {:aws [{:profile aws-account-id
                        :region region

@@ -10,12 +10,14 @@
                     :step step
                     :opts opts}))
 
-(def default-opts {:aws-account-id "111111111111"
-                   :region "eu-west-1"
-                   :ns "test.module"
-                   :fn "invoke"
-                   :owner "CI"
-                   :lock-keys [:aws-account-id :region :ns]
-                   :run-cmd "true"
-                   ::bc/test-mode true
-                   ::bc/env :repl})
+(def default-opts #:big-config.lock {:aws-account-id "111111111111"
+                                     :region "eu-west-1"
+                                     :ns "test.module"
+                                     :fn "invoke"
+                                     :owner "CI"
+                                     :lock-keys [:big-config.lock/aws-account-id
+                                                 :big-config.lock/region
+                                                 :big-config.lock/ns]
+                                     :run-cmd "true"
+                                     ::bc/test-mode true
+                                     ::bc/env :repl})

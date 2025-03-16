@@ -72,7 +72,7 @@
   (generic-cmd opts "git push"))
 
 (defn run-cmd [opts]
-  (let [{:keys [::bc/env run-cmd]} opts
+  (let [{:keys [::bc/env :big-config.lock/run-cmd]} opts
         shell-opts {:continue true}
         shell-opts (case env
                      :shell shell-opts

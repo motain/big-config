@@ -23,7 +23,7 @@
           xs (atom [])
           step-fn (partial test-step-fn #{::lock/end ::unlock/end} xs)]
       (lock step-fn opts)
-      (lock step-fn (assoc opts :owner "CI2"))
+      (lock step-fn (assoc opts ::lock/owner "CI2"))
       (unlock-any step-fn opts)
       (as-> @xs $
         (map ::bc/exit $)

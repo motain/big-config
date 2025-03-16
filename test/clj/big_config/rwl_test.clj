@@ -1,6 +1,7 @@
 (ns big-config.rwl-test
   (:require
    [big-config :as bc]
+   [big-config.lock :as lock]
    [big-config.run-with-lock :as rwl :refer [run-with-lock]]
    [big-config.utils-test :refer [default-opts test-step-fn]]
    [clojure.test :refer [deftest is testing]]))
@@ -10,10 +11,10 @@
     (let [opts    default-opts
           xs      (atom [])
           step-fn (partial test-step-fn #{::rwl/end} xs)]
-      (run-with-lock step-fn (assoc opts :run-cmd "false"))
-      (run-with-lock step-fn (assoc opts :owner "CI2"))
+      (run-with-lock step-fn (assoc opts ::lock/run-cmd "false"))
+      (run-with-lock step-fn (assoc opts ::lock/owner "CI2"))
       (run-with-lock step-fn opts)
-      (run-with-lock step-fn (assoc opts :owner "CI2"))
+      (run-with-lock step-fn (assoc opts ::lock/owner "CI2"))
       (as-> @xs $
         (map ::bc/exit $)
         (is (= [1 1 0 0] $))))))
