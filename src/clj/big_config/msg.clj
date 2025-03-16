@@ -2,7 +2,7 @@
   (:require
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
-   [com.bunimo.clansi :as clansi]))
+   [bling.core :refer [bling]]))
 
 (defn step->message [step]
   (let [messages {::run/generate-main-tf-json "Generating the main.tf.json file"
@@ -15,4 +15,4 @@
                   ::rwl/lock-release-any-owner "Releasing lock"}
         msg (step messages)]
     (when msg
-      (clansi/style msg :green))))
+      (bling [:green.bold msg]))))

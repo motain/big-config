@@ -2,8 +2,8 @@
   (:require
    [babashka.process :as process]
    [big-config :as bc]
-   [clojure.string :as str]
-   [com.bunimo.clansi :as clansi :refer [style]]))
+   [bling.core :refer [bling]]
+   [clojure.string :as str]))
 
 (defn exit-with-code [n]
   (shutdown-agents)
@@ -87,9 +87,10 @@
   ([err-msg opts]
    (let [{:keys [::bc/exit ::bc/env ::bc/err]} opts
          err (or err-msg err)]
-     (when (and (not= exit 0) (string? err))
+     (when (and (not= exit 0)
+                (string? err))
        (binding [*out* *err*]
-         (println (style err :red))))
+         (println (bling [:red.bold err]))))
      (case env
        :shell (exit-with-code exit)
        :repl opts))))
