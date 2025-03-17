@@ -1,0 +1,30 @@
+{:default #:big-config.lock {:aws-account-id "111111111111"
+                             :region "eu-west-1"
+                             :ns "namespace"
+                             :fn "invoke"
+                             :cmd :init
+                             :owner #or [#env ZELLIJ_SESSION_NAME "CI"]
+                             :lock-keys [:big-config.lock/aws-account-id
+                                         :big-config.lock/region
+                                         :big-config.lock/ns]
+                             :working-dir [:big-config.aero/join
+                                           "tofu/"
+                                           :big-config.lock/aws-account-id "/"
+                                           :big-config.lock/region "/"
+                                           :big-config.lock/ns]
+                             :run-cmd [:big-config.aero/join
+                                       "bash -c 'cd "
+                                       :big-config.lock/working-dir
+                                       " && direnv exec . tofu "
+                                       :big-config.lock/cmd "'"]}
+
+ :default-dev #merge [#ref [:default]
+                      #:big-config.lock {:aws-account-id "251213589273"}]
+
+ :default-prod #merge [#ref [:default]
+                       #:big-config.lock {:aws-account-id "111111111111"}]
+
+ :module-a #profile {:dev #merge [#ref [:default-dev]
+                                  #:big-config.lock {:ns "tofu.module-a.main"}]
+                     :prod #merge [#ref [:default-prod]
+                                   #:big-config.lock {:ns "tofu.module-a.main"}]}}
