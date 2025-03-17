@@ -1,26 +1,29 @@
 (ns big-config.run-with-lock
   (:require
+   [big-config.aero :as aero :refer [read-module]]
    [big-config.git :refer [check]]
    [big-config.lock :refer [lock]]
    [big-config.run :refer [generate-main-tf-json]]
    [big-config.unlock :refer [unlock-any]]
-   [big-config.utils :refer [choice default-step-fn git-push run-cmd]]))
+   [big-config.utils :refer [choice default-step-fn git-push run-cmd]]
+   [clojure.java.io :as io]))
 
 (defn run-with-lock
   ([opts]
    (run-with-lock default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::lock-acquire
+   (loop [step ::read-module
           opts opts]
      (let [[f next-step errmsg] (case step
+                                  ::read-module [read-module ::lock-acquire]
                                   ::lock-acquire [(partial lock step-fn) ::git-check "Failed to acquire the lock"]
                                   ::git-check [(partial check step-fn) ::generate-main-tf-json "The working directory is not clean"]
                                   ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
                                   ::run-cmd [run-cmd ::git-push "The command executed with the lock failed"]
-                                  ::git-push [git-push ::lock-release-any-owner nil]
+                                  ::git-push [git-push ::lock-release-any-owner]
                                   ::lock-release-any-owner [(partial unlock-any step-fn) ::end "Failed to release the lock"]
-                                  ::end [identity nil])]
+                                  ::end [identity])]
        (as-> (step-fn {:f f
                        :step step
                        :opts opts}) $
@@ -30,3 +33,8 @@
                     :errmsg errmsg
                     :opts $})
            $))))))
+
+(comment
+  (->> (run-with-lock {::aero/config (io/resource "rwl.edn")
+                       ::aero/module :module-a})
+       (into (sorted-map))))

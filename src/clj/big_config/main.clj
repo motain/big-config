@@ -1,31 +1,13 @@
 (ns big-config.main
   (:require
-   [aero.core :as aero]
    [big-config :as bc]
+   [big-config.aero :as aero]
    [big-config.lock :as lock]
    [big-config.msg :refer [step->message]]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
-   [big-config.utils :refer [default-step-fn exit-end-fn]]
-   [clojure.string :as str]))
-
-(defn resolve-array [config key xs]
-  (assoc config key
-         (->> xs
-              (map (fn [e] (if (keyword? e) (name (e config)) e)))
-              (str/join ""))))
-
-(defn read-module [cmd module profile]
-  (let [config (-> (aero/read-config "big-config.edn" {:profile profile})
-                   module
-                   (merge {::lock/cmd cmd
-                           ::lock/module module
-                           ::lock/profile profile}))
-        {:keys [::lock/run-cmd ::lock/working-dir]} config
-        config (resolve-array config ::lock/working-dir working-dir)
-        config (resolve-array config ::lock/run-cmd run-cmd)]
-    config))
+   [big-config.utils :refer [default-step-fn exit-end-fn]]))
 
 (defn run-step-fn [end {:keys [f step opts]}]
   (let [msg (step->message step)]
@@ -42,16 +24,19 @@
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env
                       step-fn :step-fn}]
-  (let [step-fn (or step-fn run-step-fn)]
-    (as-> (read-module cmd module profile) $
-      (assoc $ ::bc/env (or env :shell))
-      (case cmd
-        (:init :plan)     (run/run (partial step-fn ::run/end) $)
-        :lock             (lock/lock (partial step-fn ::lock/end) $)
-        :unlock-any       (unlock/unlock-any (partial step-fn ::unlock/end) $)
-        (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) $)))))
+  (let [step-fn (or step-fn run-step-fn)
+        opts {::run/cmd (name cmd)
+              ::bc/env (or env :shell)
+              ::aero/config "big-config.edn"
+              ::aero/module module
+              ::aero/profile profile}]
+    (case cmd
+      (:init :plan)     (run/run (partial step-fn ::run/end) opts)
+      :lock             (lock/lock (partial step-fn ::lock/end) opts)
+      :unlock-any       (unlock/unlock-any (partial step-fn ::unlock/end) opts)
+      (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts))))
 
 (comment
-  (->> (tofu {:args [:init :module-a :dev]
+  (->> (tofu {:args [:apply :module-a :dev]
               :env :repl})
        (into (sorted-map))))

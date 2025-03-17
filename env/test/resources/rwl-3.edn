@@ -1,0 +1,11 @@
+{:module-a #:big-config.lock {:aws-account-id "111111111111"
+                              :region "eu-west-1"
+                              :ns "test.module"
+                              :fn "invoke"
+                              :owner "CI"
+                              :lock-keys [:big-config.lock/aws-account-id
+                                          :big-config.lock/region
+                                          :big-config.lock/ns]
+                              :big-config.run/run-cmd "true"
+                              :big-config/test-mode true
+                              :big-config/env :repl}}

@@ -1,12 +1,13 @@
 (ns big-config.run
   (:require
    [big-config :as bc]
+   [big-config.aero :as aero :refer [read-module]]
    [big-config.lock :as lock]
    [big-config.utils :refer [choice default-step-fn run-cmd]]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]
-  (let [{:keys [::bc/test-mode ::lock/fn ::lock/ns ::lock/working-dir]} opts
+  (let [{:keys [::bc/test-mode ::lock/fn ::lock/ns ::working-dir]} opts
         f (str working-dir "/main.tf.json")]
     (if test-mode
       (merge opts {::bc/exit 0
@@ -29,9 +30,10 @@
    (run default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::generate-main-tf-json
+   (loop [step ::read-module
           opts opts]
      (let [[f next-step] (case step
+                           ::read-module [read-module ::generate-main-tf-json]
                            ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
                            ::run-cmd [run-cmd ::end]
                            ::end [identity nil])]
@@ -43,3 +45,10 @@
                     :on-failure ::end
                     :opts $})
            $))))))
+
+(comment
+  (run {::cmd :init
+        ::bc/env :repl
+        ::aero/config "big-config.edn"
+        ::aero/module :module-a
+        ::aero/profile :dev}))

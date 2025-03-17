@@ -12,14 +12,14 @@
 
 (defmacro choice
   ([{:keys [on-success on-failure opts errmsg]}]
-   `(let [exit# (:big-config/exit ~opts)
-          err# (:big-config/err ~opts)
+   `(let [exit# (::bc/exit ~opts)
+          err# (::bc/err ~opts)
           msg# (if ~errmsg
                  ~errmsg
                  err#)]
       (if (= exit# 0)
         (recur ~on-success ~opts)
-        (recur ~on-failure (assoc ~opts :big-config/err msg#))))))
+        (recur ~on-failure (assoc ~opts ::bc/err msg#))))))
 
 (def default-opts {:continue true
                    :out :string
@@ -72,7 +72,7 @@
   (generic-cmd opts "git push"))
 
 (defn run-cmd [opts]
-  (let [{:keys [::bc/env :big-config.lock/run-cmd]} opts
+  (let [{:keys [::bc/env :big-config.run/run-cmd]} opts
         shell-opts {:continue true}
         shell-opts (case env
                      :shell shell-opts

@@ -3,8 +3,7 @@
    [aero.core :as aero]
    [big-config :as bc]
    [big-config.utils :refer [deep-merge]]
-   [clojure.string :as str]
-   [clojure.java.io :as io]))
+   [clojure.string :as str]))
 
 (defn ready?
   "All elements resolves to a string"
