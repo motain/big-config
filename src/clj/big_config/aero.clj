@@ -2,8 +2,9 @@
   (:require
    [aero.core :as aero]
    [big-config :as bc]
-   [clojure.java.io :as io]
-   [clojure.string :as str]))
+   [big-config.utils :refer [deep-merge]]
+   [clojure.string :as str]
+   [clojure.java.io :as io]))
 
 (defn ready?
   "All elements resolves to a string"
@@ -35,13 +36,12 @@
 
 (defn read-module
   "Step to read the opts from file or resource"
-  [{:keys [::resource ::module ::profile]}]
-  (let [config (-> (aero/read-config (io/resource resource) {:profile profile})
+  [{:keys [::config ::module ::profile] :as opts}]
+  (let [config (-> (aero/read-config config {:profile (or profile :default)})
                    module
-                   (merge {::resource resource
-                           ::module module
+                   (merge {::module module
                            ::profile profile}))]
-    (loop [config config
+    (loop [config (deep-merge opts config)
            done (atom true)
            iteration 0]
       (let [config (update-vals config (fn [v]
@@ -49,8 +49,12 @@
                                                   (= (first v) ::join))
                                            (aero-join config (rest v) done)
                                            v)))]
-        (if @done
+        (if (> iteration 100)
           (merge config
-                 {::bc/exit 0
-                  ::bc/err nil})
-          (recur config (atom true) (inc iteration)))))))
+                 {::bc/exit 1
+                  ::bc/err "Too many iteration in `big-config.aero/read-module`"})
+          (if @done
+            (merge config
+                   {::bc/exit 0
+                    ::bc/err nil})
+            (recur config (atom true) (inc iteration))))))))
