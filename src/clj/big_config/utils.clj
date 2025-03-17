@@ -99,4 +99,19 @@
   (let [opts (update opts ::bc/steps (fnil conj []) step)]
     (f opts)))
 
+(defn step->workflow
+  ([f single-step]
+   (step->workflow f single-step nil))
+  ([f single-step errmsg]
+   (fn workflow
+     ([opts]
+      (workflow default-step-fn opts))
+     ([step-fn opts]
+      (let [{:keys [::bc/exit] :as opts} (step-fn {:f f
+                                                   :step single-step
+                                                   :opts opts})]
+        (if (and errmsg (not= exit 0))
+          (assoc opts ::bc/err errmsg)
+          opts))))))
+
 (comment)

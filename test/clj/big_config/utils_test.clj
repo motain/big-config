@@ -1,7 +1,8 @@
 (ns big-config.utils-test
   (:require
    [big-config :as bc]
-   [big-config.utils :refer [default-step-fn]]))
+   [big-config.utils :refer [default-step-fn step->workflow]]
+   [clojure.test :refer [deftest is testing]]))
 
 (defn test-step-fn [end-steps xs {:keys [f step opts]}]
   (when (end-steps step)
@@ -21,3 +22,13 @@
                                      :run-cmd "true"
                                      ::bc/test-mode true
                                      ::bc/env :repl})
+
+(deftest step->workflow-test
+  (testing "step->workflow"
+    (let [expected {:big-config.utils-test/foo :bar, :big-config/steps [:big-config.utils-test/foo], :big-config/exit 1, :big-config/err "Error"}
+          f (fn [opts]
+              (merge opts
+                     {::bc/exit 1
+                      ::bc/err "Err"}))]
+      (as-> ((step->workflow f ::foo "Error") {::foo :bar}) $
+        (is (= expected $))))))
