@@ -2,6 +2,7 @@
   (:require
    [babashka.process :as process]
    [big-config :as bc]
+   [big-config.msg :refer [step->message]]
    [bling.core :refer [bling]]
    [clojure.string :as str]))
 
@@ -81,19 +82,15 @@
         proc (process/shell shell-opts run-cmd)]
     (handle-cmd opts proc)))
 
-(defn exit-end-fn
-  ([opts]
-   (exit-end-fn nil opts))
-  ([err-msg opts]
-   (let [{:keys [::bc/exit ::bc/env ::bc/err]} opts
-         err (or err-msg err)]
-     (when (and (not= exit 0)
-                (string? err))
-       (binding [*out* *err*]
-         (println (bling [:red.bold err]))))
-     (case env
-       :shell (exit-with-code exit)
-       :repl opts))))
+(defn opts->exit [opts]
+  (let [{:keys [::bc/exit ::bc/env ::bc/err]} opts]
+    (when (and (not= exit 0)
+               (string? err))
+      (binding [*out* *err*]
+        (println (bling [:red.bold err]))))
+    (case env
+      :shell (exit-with-code exit)
+      :repl opts)))
 
 (defn default-step-fn [{:keys [f step opts]}]
   (let [opts (update opts ::bc/steps (fnil conj []) step)]
@@ -113,5 +110,32 @@
         (if (and errmsg (not= exit 0))
           (assoc opts ::bc/err errmsg)
           opts))))))
+
+(defn exit-with-err-step-fn
+  [end {:keys [f step opts]}]
+  (let [msg (step->message step)]
+    (when msg
+      (binding [*out* *err*]
+        (println msg)))
+    (let [new-opts (default-step-fn {:f f
+                                     :step step
+                                     :opts opts})
+          {:keys [::bc/exit]} new-opts]
+      (when (and (= step end) (not= exit 0))
+        (opts->exit new-opts))
+      new-opts)))
+
+(defn exit-step-fn
+  [end {:keys [f step opts]}]
+  (let [msg (step->message step)]
+    (when msg
+      (binding [*out* *err*]
+        (println msg)))
+    (let [new-opts (default-step-fn {:f f
+                                     :step step
+                                     :opts opts})]
+      (when (= step end)
+        (opts->exit new-opts))
+      new-opts)))
 
 (comment)
