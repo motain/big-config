@@ -1,12 +1,12 @@
 (ns big-config.run
   (:require
    [big-config :as bc]
-   [big-config.lock :as lock]
+   [big-config.tofu :as tofu]
    [big-config.utils :refer [choice default-step-fn run-cmd]]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]
-  (let [{:keys [::bc/test-mode ::lock/fn ::lock/ns ::working-dir]} opts
+  (let [{:keys [::bc/test-mode ::tofu/fn ::tofu/ns ::working-dir]} opts
         f (str working-dir "/main.tf.json")]
     (if test-mode
       (merge opts {::bc/exit 0

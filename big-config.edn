@@ -1,16 +1,16 @@
-{:default {:big-config.lock/aws-account-id "111111111111"
-           :big-config.lock/region "eu-west-1"
-           :big-config.lock/ns "namespace"
-           :big-config.lock/fn "invoke"
+{:default {:big-config.tofu/aws-account-id "111111111111"
+           :big-config.tofu/region "eu-west-1"
+           :big-config.tofu/ns "namespace"
+           :big-config.tofu/fn "invoke"
            :big-config.lock/owner #or [#env ZELLIJ_SESSION_NAME "CI"]
-           :big-config.lock/lock-keys [:big-config.lock/aws-account-id
-                                       :big-config.lock/region
-                                       :big-config.lock/ns]
+           :big-config.lock/lock-keys [:big-config.tofu/aws-account-id
+                                       :big-config.tofu/region
+                                       :big-config.tofu/ns]
            :big-config.run/working-dir [:big-config.aero/join
                                         "tofu/"
-                                        :big-config.lock/aws-account-id "/"
-                                        :big-config.lock/region "/"
-                                        :big-config.lock/ns]
+                                        :big-config.tofu/aws-account-id "/"
+                                        :big-config.touf/region "/"
+                                        :big-config.tofu/ns]
            :big-config.run/run-cmd [:big-config.aero/join
                                     "bash -c 'cd "
                                     :big-config.run/working-dir
@@ -18,12 +18,12 @@
                                     :big-config.run/cmd "'"]}
 
  :default-dev #merge [#ref [:default]
-                      #:big-config.lock {:aws-account-id "251213589273"}]
+                      #:big-config.tofu {:aws-account-id "251213589273"}]
 
  :default-prod #merge [#ref [:default]
-                       #:big-config.lock {:aws-account-id "111111111111"}]
+                       #:big-config.tofu {:aws-account-id "111111111111"}]
 
  :module-a #profile {:dev #merge [#ref [:default-dev]
-                                  #:big-config.lock {:ns "tofu.module-a.main"}]
+                                  #:big-config.tofu {:ns "tofu.module-a.main"}]
                      :prod #merge [#ref [:default-prod]
-                                   #:big-config.lock {:ns "tofu.module-a.main"}]}}
+                                   #:big-config.tofu {:ns "tofu.module-a.main"}]}}
