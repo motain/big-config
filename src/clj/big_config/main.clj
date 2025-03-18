@@ -3,6 +3,7 @@
    [big-config :as bc]
    [big-config.aero :as aero]
    [big-config.lock :as lock]
+   [big-config.msg :refer [step->message]]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
@@ -23,8 +24,10 @@
         opts (read-module (partial aero-step-fn ::aero/read-module) opts)]
     (case cmd
       (:init :plan)     (run/run (partial step-fn ::run/end) opts)
-      :lock             (lock/lock (partial step-fn ::lock/end) opts)
-      :unlock-any       (unlock/unlock-any (partial step-fn ::lock/end) opts)
+      :lock             (do (println (step->message ::rwl/lock-acquire))
+                            (lock/lock (partial step-fn ::lock/end) opts))
+      :unlock-any       (do (println (step->message ::rwl/lock-release-any-owner))
+                            (unlock/unlock-any (partial step-fn ::lock/end) opts))
       (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts))))
 
 (comment
