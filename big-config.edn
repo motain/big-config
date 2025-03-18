@@ -9,7 +9,7 @@
            :big-config.run/working-dir [:big-config.aero/join
                                         "tofu/"
                                         :big-config.tofu/aws-account-id "/"
-                                        :big-config.touf/region "/"
+                                        :big-config.tofu/region "/"
                                         :big-config.tofu/ns]
            :big-config.run/run-cmd [:big-config.aero/join
                                     "bash -c 'cd "

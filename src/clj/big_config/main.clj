@@ -7,7 +7,8 @@
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
-   [big-config.utils :refer [exit-step-fn exit-with-err-step-fn step->workflow]]))
+   [big-config.utils :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
+   [clojure.pprint :as pp]))
 
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env
@@ -23,6 +24,7 @@
               ::aero/profile profile}
         opts (read-module (partial aero-step-fn ::aero/read-module) opts)]
     (case cmd
+      :opts             (pp/pprint (into (sorted-map) opts))
       (:init :plan)     (run/run (partial step-fn ::run/end) opts)
       :lock             (do (println (step->message ::rwl/lock-acquire))
                             (lock/lock (partial step-fn ::lock/end) opts))
