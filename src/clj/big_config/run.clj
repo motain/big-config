@@ -1,7 +1,6 @@
 (ns big-config.run
   (:require
    [big-config :as bc]
-   [big-config.aero :as aero :refer [read-module]]
    [big-config.lock :as lock]
    [big-config.utils :refer [choice default-step-fn run-cmd]]
    [cheshire.core :as json]))
@@ -30,10 +29,9 @@
    (run default-step-fn opts))
   ([step-fn opts]
    #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::read-module
+   (loop [step ::generate-main-tf-json
           opts opts]
      (let [[f next-step] (case step
-                           ::read-module [read-module ::generate-main-tf-json]
                            ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
                            ::run-cmd [run-cmd ::end]
                            ::end [identity nil])]
@@ -47,8 +45,14 @@
            $))))))
 
 (comment
-  (run {::cmd :init
-        ::bc/env :repl
-        ::aero/config "big-config.edn"
-        ::aero/module :module-a
-        ::aero/profile :dev}))
+  (run #:big-config.lock {:aws-account-id "111111111111"
+                          :region "eu-west-1"
+                          :ns "test.module"
+                          :fn "invoke"
+                          :owner "CI"
+                          :lock-keys [:big-config.lock/aws-account-id
+                                      :big-config.lock/region
+                                      :big-config.lock/ns]
+                          :big-config.run/run-cmd "true"
+                          :big-config/test-mode true
+                          :big-config/env :repl}))

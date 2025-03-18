@@ -1,6 +1,7 @@
 (ns big-config.utils-test
   (:require
    [big-config :as bc]
+   [big-config.run :as run]
    [big-config.utils :refer [default-step-fn step->workflow]]
    [clojure.test :refer [deftest is testing]]))
 
@@ -19,7 +20,7 @@
                                      :lock-keys [:big-config.lock/aws-account-id
                                                  :big-config.lock/region
                                                  :big-config.lock/ns]
-                                     :run-cmd "true"
+                                     ::run/run-cmd "true"
                                      ::bc/test-mode true
                                      ::bc/env :repl})
 

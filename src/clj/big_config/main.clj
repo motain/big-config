@@ -9,7 +9,22 @@
    [big-config.unlock :as unlock]
    [big-config.utils :refer [default-step-fn exit-end-fn step->workflow]]))
 
-(defn run-step-fn [end {:keys [f step opts]}]
+(defn exit-with-err-step-fn
+  [end {:keys [f step opts]}]
+  (let [msg (step->message step)]
+    (when msg
+      (binding [*out* *err*]
+        (println msg)))
+    (let [new-opts (default-step-fn {:f f
+                                     :step step
+                                     :opts opts})
+          {:keys [::bc/exit]} new-opts]
+      (when (and (= step end) (not= exit 0))
+        (exit-end-fn new-opts))
+      new-opts)))
+
+(defn run-step-fn
+  [end {:keys [f step opts]}]
   (let [msg (step->message step)]
     (when msg
       (binding [*out* *err*]
@@ -30,16 +45,15 @@
               ::bc/env (or env :shell)
               ::aero/config "big-config.edn"
               ::aero/module module
-              ::aero/profile profile}]
+              ::aero/profile profile}
+        opts (read-module (partial exit-with-err-step-fn ::aero/read-module) opts)]
     (case cmd
       (:init :plan)     (run/run (partial step-fn ::run/end) opts)
-      :lock             (->> (read-module (partial step-fn ::aero/read-module) opts)
-                             (lock/lock (partial step-fn ::lock/end)))
-      :unlock-any       (->> (read-module (partial step-fn ::aero/read-module) opts)
-                             (unlock/unlock-any (partial step-fn ::lock/end)))
+      :lock             (lock/lock (partial step-fn ::lock/end) opts)
+      :unlock-any       (unlock/unlock-any (partial step-fn ::lock/end) opts)
       (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts))))
 
 (comment
-  (->> (tofu {:args [:unlock-any :module-a :dev]
+  (->> (tofu {:args [:init :module-a :dev]
               :env :repl})
        (into (sorted-map))))
