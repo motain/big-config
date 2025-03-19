@@ -8,7 +8,8 @@
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
    [big-config.utils :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
-   [clojure.pprint :as pp]))
+   [clojure.pprint :as pp]
+   [big-config.tofu :as tofu]))
 
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env
@@ -30,7 +31,8 @@
                             (lock/lock (partial step-fn ::lock/end) opts))
       :unlock-any       (do (println (step->message ::rwl/lock-release-any-owner))
                             (unlock/unlock-any (partial step-fn ::lock/end) opts))
-      (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts))))
+      (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts)
+      :ci               (tofu/run-ci (partial step-fn ::tofu/end) opts))))
 
 (comment
   (->> (tofu {:args [:init :module-a :dev]
