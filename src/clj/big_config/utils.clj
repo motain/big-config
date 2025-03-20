@@ -11,6 +11,15 @@
   (flush)
   (System/exit n))
 
+(defn deep-merge
+  "Recursively merges maps."
+  [& maps]
+  (letfn [(m [& xs]
+            (if (some #(and (map? %) (not (record? %))) xs)
+              (apply merge-with m xs)
+              (last xs)))]
+    (reduce m maps)))
+
 (defn choice [{:keys [on-success
                       on-failure
                       errmsg
@@ -39,23 +48,50 @@
     ([step-fn opts]
      (loop [step first-step
             opts opts]
-       (let [[f next-step errmsg] (wire-fn step step-fn)]
-         (as-> (step-fn {:f f
-                         :step step
-                         :opts opts}) $
-           (let [next-fn (if (keyword next-fn)
-                           (fn [_ next-step opts]
-                             (if next-step
-                               (choice {:on-success next-step
-                                        :on-failure next-fn
-                                        :errmsg errmsg
-                                        :opts opts})
-                               [nil opts]))
-                           next-fn)
-                 [next-step next-opts] (next-fn step next-step $)]
-             (if next-step
-               (recur next-step next-opts)
-               next-opts))))))))
+       (let [[f next-step errmsg] (wire-fn step step-fn)
+             opts (try (step-fn {:f f
+                                 :step step
+                                 :opts opts})
+                       (catch Exception e
+                         (-> (if-let [ex-opts (ex-data e)]
+                               ex-opts
+                               opts)
+                             (merge {::bc/err (ex-message e)
+                                     ::bc/exit 1}))))
+             next-fn (if (keyword? next-fn)
+                       (fn [_ next-step opts]
+                         (if next-step
+                           (choice {:on-success next-step
+                                    :on-failure next-fn
+                                    :errmsg errmsg
+                                    :opts opts})
+                           [nil opts]))
+                       next-fn)
+             [next-step next-opts] (next-fn step next-step opts)]
+         (if next-step
+           (recur next-step next-opts)
+           next-opts))))))
+
+#_(->> ((->workflow {:first-step ::foo
+                     :wire-fn (fn [step _]
+                                (case step
+                                  ::foo [#(throw (Exception. "Java exception") #_%) ::end]
+                                  ::end [identity]))
+                     :next-fn ::end}) {::bar :baz})
+       (into (sorted-map)))
+
+#_(->> ((->workflow {:first-step ::foo
+                     :wire-fn (fn [step _]
+                                (case step
+                                  ::foo [#(throw (ex-info "Error" %)) ::end]
+                                  ::end [identity]))
+                     :next-fn ::end})
+        {::bar :baz})
+       (into (sorted-map)))
+
+#_(try (throw (Exception. "Java exception"))
+       (catch Exception e
+         ((juxt ex-message ex-data) e)))
 
 (def default-opts {:continue true
                    :out :string
@@ -83,15 +119,6 @@
          (assoc key (-> (:out proc)
                         str/trim-newline))
          (handle-cmd proc)))))
-
-(defn deep-merge
-  "Recursively merges maps."
-  [& maps]
-  (letfn [(m [& xs]
-            (if (some #(and (map? %) (not (record? %))) xs)
-              (apply merge-with m xs)
-              (last xs)))]
-    (reduce m maps)))
 
 (defn nested-sort-map [m]
   (cond
