@@ -2,7 +2,7 @@
   (:require
    [big-config :as bc]
    [big-config.tofu :as tofu]
-   [big-config.utils :refer [choice default-step-fn run-cmd]]
+   [big-config.utils :refer [->workflow choice run-cmd]]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]
@@ -24,35 +24,24 @@
           (merge opts {::bc/exit 1
                        ::bc/err (pr-str e)}))))))
 
-(defn run
-  ([opts]
-   (run default-step-fn opts))
-  ([step-fn opts]
-   #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::generate-main-tf-json
-          opts opts]
-     (let [[f next-step] (case step
-                           ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
-                           ::run-cmd [run-cmd ::end]
-                           ::end [identity nil])]
-       (as-> (step-fn {:f f
-                       :step step
-                       :opts opts}) $
-         (if next-step
-           (choice {:on-success next-step
-                    :on-failure ::end
-                    :opts $})
-           $))))))
+(def run (->workflow {:first-step ::generate-main-tf-json
+                      :wire-fn (fn [step _]
+                                 (case step
+                                   ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
+                                   ::run-cmd [run-cmd ::end]
+                                   ::end [identity nil]))
+                      :next-fn ::end}))
 
 (comment
-  (run #:big-config.lock {:aws-account-id "111111111111"
-                          :region "eu-west-1"
-                          :ns "test.module"
-                          :fn "invoke"
-                          :owner "CI"
-                          :lock-keys [:big-config.lock/aws-account-id
-                                      :big-config.lock/region
-                                      :big-config.lock/ns]
-                          :big-config.run/run-cmd "true"
-                          :big-config/test-mode true
-                          :big-config/env :repl}))
+  (->> (run #:big-config.lock {:aws-account-id "111111111111"
+                               :region "eu-west-1"
+                               :ns "test.module"
+                               :fn "invoke"
+                               :owner "CI"
+                               :lock-keys [:big-config.lock/aws-account-id
+                                           :big-config.lock/region
+                                           :big-config.lock/ns]
+                               :big-config.run/run-cmd "true"
+                               :big-config/test-mode true
+                               :big-config/env :repl})
+       (into (sorted-map))))

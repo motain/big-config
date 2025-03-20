@@ -2,7 +2,7 @@
   (:require
    [babashka.process :as process]
    [big-config :as bc]
-   [big-config.utils :as utils :refer [choice default-step-fn generic-cmd
+   [big-config.utils :as utils :refer [->workflow choice generic-cmd
                                        handle-cmd nested-sort-map]]
    [clojure.edn :as edn]
    [clojure.string :as str]))
@@ -80,33 +80,28 @@
                   {::bc/exit 1
                    ::bc/err err}))))
 
-(defn lock
-  ([opts]
-   (lock default-step-fn opts))
-  ([step-fn opts]
-   #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::generate-lock-id
-          opts opts]
-     (let [[f next-step] (case step
-                           ::generate-lock-id [generate-lock-id ::delete-tag]
-                           ::delete-tag [delete-tag ::create-tag]
-                           ::create-tag [create-tag ::push-tag]
-                           ::push-tag [push-tag ::get-remote-tag]
-                           ::get-remote-tag [(comp get-remote-tag delete-tag) ::read-tag]
-                           ::read-tag [read-tag ::check-tag]
-                           ::check-tag [check-tag ::end]
-                           ::end [identity nil])]
-       (as-> (step-fn {:f f
-                       :step step
-                       :opts opts}) $
-         (case step
-           ::end $
-           ::push-tag (choice {:on-success ::end
-                               :on-failure next-step
-                               :opts $})
-           ::delete-tag (recur next-step $)
-           (choice {:on-success next-step
-                    :on-failure ::end
-                    :opts $})))))))
+(def lock (->workflow {:first-step ::generate-lock-id
+                       :wire-fn (fn [step _]
+                                  (case step
+                                    ::generate-lock-id [generate-lock-id ::delete-tag]
+                                    ::delete-tag [delete-tag ::create-tag]
+                                    ::create-tag [create-tag ::push-tag]
+                                    ::push-tag [push-tag ::get-remote-tag]
+                                    ::get-remote-tag [(comp get-remote-tag delete-tag) ::read-tag]
+                                    ::read-tag [read-tag ::check-tag]
+                                    ::check-tag [check-tag ::end]
+                                    ::end [identity]))
+                       :next-fn (fn [step next-step opts]
+                                  (case step
+                                    ::end [nil opts]
+                                    ::push-tag (choice {:on-success ::end
+                                                        :on-failure next-step
+                                                        :opts opts})
+                                    ::delete-tag [next-step opts]
+                                    (choice {:on-success next-step
+                                             :on-failure ::end
+                                             :opts opts})))}))
 
-(comment)
+(comment
+  (->> (lock {::owner "alberto"})
+       (into (sorted-map))))

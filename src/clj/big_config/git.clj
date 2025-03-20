@@ -1,10 +1,13 @@
 (ns big-config.git
   (:require
    [big-config :as bc]
-   [big-config.utils :refer [choice default-step-fn generic-cmd]]))
+   [big-config.utils :refer [->workflow choice generic-cmd]]))
 
 (defn get-revision [revision key opts]
-  (let [cmd (format "git rev-parse %s" revision)]
+  (let [revision (cond
+                   (string? revision) revision
+                   (keyword? revision) (revision opts))
+        cmd (format "git rev-parse %s" revision)]
     (generic-cmd opts cmd key)))
 
 (defn fetch-origin [opts]
@@ -29,29 +32,19 @@
                   {::bc/exit 1
                    ::bc/err "The local revisions don't match the remote revision"}))))
 
-(defn check
-  ([opts]
-   (check default-step-fn opts))
-  ([step-fn opts]
-   #_{:clj-kondo/ignore [:loop-without-recur]}
-   (loop [step ::git-diff
-          opts opts]
-     (let [[f next-step] (case step
-                           ::git-diff [git-diff ::fetch-origin]
-                           ::fetch-origin [fetch-origin ::upstream-name]
-                           ::upstream-name [(partial upstream-name ::upstream-name) ::pre-revision]
-                           ::pre-revision [(partial get-revision "HEAD~1" ::prev-revision) ::current-revision]
-                           ::current-revision [(partial get-revision "HEAD" ::current-revision) ::origin-revision]
-                           ::origin-revision [(partial get-revision (::upstream-name opts) ::origin-revision) ::compare-revisions]
-                           ::compare-revisions [compare-revisions ::end]
-                           ::end [identity nil])]
-       (as-> (step-fn {:f f
-                       :step step
-                       :opts opts}) $
-         (if next-step
-           (choice {:on-success next-step
-                    :on-failure ::end
-                    :opts $})
-           $))))))
+(def check (->workflow {:first-step ::git-diff
+                        :wire-fn (fn [step _]
+                                   (case step
+                                     ::git-diff [git-diff ::fetch-origin]
+                                     ::fetch-origin [fetch-origin ::upstream-name]
+                                     ::upstream-name [(partial upstream-name ::upstream-name) ::pre-revision]
+                                     ::pre-revision [(partial get-revision "HEAD~1" ::prev-revision) ::current-revision]
+                                     ::current-revision [(partial get-revision "HEAD" ::current-revision) ::origin-revision]
+                                     ::origin-revision [(partial get-revision ::upstream-name ::origin-revision) ::compare-revisions]
+                                     ::compare-revisions [compare-revisions ::end]
+                                     ::end [identity]))
+                        :next-fn ::end}))
 
-(comment)
+(comment
+  (->> (check {})
+       (into (sorted-map))))

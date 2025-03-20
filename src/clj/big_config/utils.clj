@@ -11,16 +11,51 @@
   (flush)
   (System/exit n))
 
-(defmacro choice
-  ([{:keys [on-success on-failure opts errmsg]}]
-   `(let [exit# (::bc/exit ~opts)
-          err# (::bc/err ~opts)
-          msg# (if ~errmsg
-                 ~errmsg
-                 err#)]
-      (if (= exit# 0)
-        (recur ~on-success ~opts)
-        (recur ~on-failure (assoc ~opts ::bc/err msg#))))))
+(defn choice [{:keys [on-success
+                      on-failure
+                      errmsg
+                      opts]}]
+  (let [exit (::bc/exit opts)
+        err (::bc/err opts)
+        msg (if errmsg
+              errmsg
+              err)]
+    (if (= exit 0)
+      [on-success opts]
+      [on-failure (assoc opts ::bc/err msg)])))
+
+(defn default-step-fn [{:keys [f step opts]}]
+  (let [opts (update opts ::bc/steps (fnil conj []) step)]
+    (f opts)))
+
+(defn ->workflow
+  [{:keys [first-step
+           step-fn
+           wire-fn
+           next-fn]}]
+  (fn workflow
+    ([opts]
+     (workflow (or step-fn default-step-fn) opts))
+    ([step-fn opts]
+     (loop [step first-step
+            opts opts]
+       (let [[f next-step errmsg] (wire-fn step step-fn)]
+         (as-> (step-fn {:f f
+                         :step step
+                         :opts opts}) $
+           (let [next-fn (if (keyword next-fn)
+                           (fn [_ next-step opts]
+                             (if next-step
+                               (choice {:on-success next-step
+                                        :on-failure next-fn
+                                        :errmsg errmsg
+                                        :opts opts})
+                               [nil opts]))
+                           next-fn)
+                 [next-step next-opts] (next-fn step next-step $)]
+             (if next-step
+               (recur next-step next-opts)
+               next-opts))))))))
 
 (def default-opts {:continue true
                    :out :string
@@ -91,10 +126,6 @@
     (case env
       :shell (exit-with-code exit)
       :repl opts)))
-
-(defn default-step-fn [{:keys [f step opts]}]
-  (let [opts (update opts ::bc/steps (fnil conj []) step)]
-    (f opts)))
 
 (defn step->workflow
   ([f single-step]
