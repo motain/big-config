@@ -6,22 +6,27 @@
                                 ->DestroyCommand ->SimpleWorkflowCommand
                                 ->UnlockAnyCommand]]
    [big-config.executors :refer [->DefaultStepExecutor]]
-   [big-config.protocols :refer [execute]]
+   [big-config.protocols :refer [execute execute-step]]
    [big-config.utils :refer [step->workflow]]
    [big-config.workflows :refer [->RunWorkflow]]
    [clojure.pprint :as pp]))
+
+(defn executor->step-fn [executor]
+  (fn [{:keys [f step opts]}]
+    (execute-step executor {:f f :step step :opts opts})))
 
 (defn ^:export tofu [{[cmd-key module profile] :args
                       env :env
                       executor :executor
                       :or {executor (->DefaultStepExecutor)}}]
-  (let [read-module (step->workflow aero/read-module ::aero/read-module)
+  (let [step-fn (executor->step-fn executor)
+        read-module (step->workflow aero/read-module ::aero/read-module)
         opts {::bc/cmd (name cmd-key)
               ::bc/env (or env :shell)
               ::aero/config "big-config.edn"
               ::aero/module module
               ::aero/profile profile}
-        opts (read-module executor opts)
+        opts (read-module step-fn opts)
         cmd (case cmd-key
               :opts    nil
               (:init :plan) (->SimpleWorkflowCommand (->RunWorkflow))
