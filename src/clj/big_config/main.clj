@@ -7,7 +7,7 @@
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
-   [big-config.utils :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
+   [big-config.core :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
    [clojure.pprint :as pp]))
 
 (defn ^:export tofu [{[cmd module profile] :args

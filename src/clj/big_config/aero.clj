@@ -2,7 +2,7 @@
   (:require
    [aero.core :as aero]
    [big-config :as bc]
-   [big-config.utils :refer [deep-merge]]
+   [big-config.core :refer [deep-merge]]
    [clojure.string :as str]))
 
 (defn ready?

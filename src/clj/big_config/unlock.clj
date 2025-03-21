@@ -2,7 +2,7 @@
   (:require
    [big-config.lock :refer [check-remote-tag delete-remote-tag delete-tag
                             generate-lock-id]]
-   [big-config.utils :refer [->workflow]]))
+   [big-config.core :refer [->workflow]]))
 
 (def unlock-any (->workflow {:first-step ::generate-lock-id
                              :wire-fn (fn [step _]

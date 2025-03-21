@@ -1,4 +1,4 @@
-(ns big-config.utils
+(ns big-config.core
   (:require
    [babashka.process :as process]
    [big-config :as bc]
@@ -32,10 +32,6 @@
     (if (= exit 0)
       [on-success opts]
       [on-failure (assoc opts ::bc/err msg)])))
-
-(defn default-step-fn [{:keys [f step opts]}]
-  (let [opts (update opts ::bc/steps (fnil conj []) step)]
-    (f opts)))
 
 (defn compose [step-fns f]
   (reduce (fn [f-acc f-next]
@@ -71,10 +67,14 @@
 
 (defn ->workflow
   [{:keys [first-step
+           last-step
            step-fns
            wire-fn
            next-fn]}]
   (fn workflow
+    ([]
+     [first-step (or last-step
+                     (keyword (namespace first-step) "end"))])
     ([opts]
      (workflow (or step-fns []) opts))
     ([step-fns opts]
@@ -155,10 +155,13 @@
   ([f single-step]
    (step->workflow f single-step nil))
   ([f single-step errmsg]
-   (->workflow {:first-step single-step
-                :wire-fn (fn [_ _]
-                           [f nil errmsg])
-                :next-fn single-step})))
+   (let [end-step (keyword (namespace single-step) "end")]
+     (->workflow {:first-step single-step
+                  :wire-fn (fn [step _]
+                             (cond
+                               (= step single-step) [f end-step errmsg]
+                               (= step end-step) [identity]))
+                  :next-fn end-step}))))
 
 (defn exit-with-err-step-fn
   [end f step opts]

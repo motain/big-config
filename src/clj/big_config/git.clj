@@ -1,7 +1,7 @@
 (ns big-config.git
   (:require
    [big-config :as bc]
-   [big-config.utils :refer [->workflow generic-cmd]]))
+   [big-config.core :refer [->workflow generic-cmd]]))
 
 (defn get-revision [revision key opts]
   (let [revision (cond

@@ -1,7 +1,7 @@
 (ns tofu.module-a.main
   (:require
    [big-config.tofu :as tofu]
-   [big-config.utils :as bc]
+   [big-config.core :as bc]
    [clojure.string :as str]
    [tofu.common.create-provider :as create-provider]
    [tofu.module-a.create-sqs :as create-sqs]))

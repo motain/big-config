@@ -2,7 +2,7 @@
   (:require
    [big-config :as bc]
    [big-config.tofu :as tofu]
-   [big-config.utils :refer [->workflow run-cmd]]
+   [big-config.core :refer [->workflow run-cmd]]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]

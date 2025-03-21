@@ -5,7 +5,7 @@
    [big-config.lock :refer [lock]]
    [big-config.run :as run :refer [generate-main-tf-json]]
    [big-config.unlock :refer [unlock-any]]
-   [big-config.utils :refer [->workflow git-push run-cmd]]))
+   [big-config.core :refer [->workflow git-push run-cmd]]))
 
 (def run-with-lock (->workflow {:first-step ::lock-acquire
                                 :wire-fn (fn [step step-fns]

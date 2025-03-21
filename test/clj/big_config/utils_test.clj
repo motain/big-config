@@ -1,8 +1,8 @@
 (ns big-config.utils-test
   (:require
    [big-config :as bc]
+   [big-config.core :refer [->workflow step->workflow]]
    [big-config.run :as run]
-   [big-config.utils :refer [->workflow default-step-fn step->workflow]]
    [clojure.test :refer [deftest is testing]]))
 
 (defn test-step-fn [end-steps xs f step opts]
@@ -24,7 +24,7 @@
 
 (deftest step->workflow-test
   (testing "step->workflow"
-    (let [expected {:big-config.utils-test/foo :bar, :big-config/steps [:big-config.utils-test/foo], :big-config/exit 1, :big-config/err "Error"}
+    (let [expected {:big-config.utils-test/foo :bar, :big-config/exit 1, :big-config/err "Error"}
           f (fn [opts]
               (merge opts
                      {::bc/exit 1
