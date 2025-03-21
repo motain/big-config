@@ -37,61 +37,58 @@
   (let [opts (update opts ::bc/steps (fnil conj []) step)]
     (f opts)))
 
+(defn compose [step-fns f]
+  (reduce (fn [f-acc f-next]
+            (partial f-next f-acc)) (fn [_ opts] (f opts)) step-fns))
+
+(defn resolve-step-fns [step-fns]
+  (-> (map (fn [f] (cond
+                     (fn? f) f
+                     (string? f) (-> f symbol requiring-resolve)
+                     :else (throw (ex-info "f is neither a string nor a fn" {:f f}))))
+           step-fns)
+      reverse))
+
+(defn try-f [f step opts]
+  (try (f step opts)
+       (catch Exception e
+         (-> (if-let [ex-opts (ex-data e)]
+               ex-opts
+               opts)
+             (merge {::bc/err (ex-message e)
+                     ::bc/exit 1})))))
+
+(defn resolve-next-fn [next-fn errmsg]
+  (if (keyword? next-fn)
+    (fn [_ next-step opts]
+      (if next-step
+        (choice {:on-success next-step
+                 :on-failure next-fn
+                 :errmsg errmsg
+                 :opts opts})
+        [nil opts]))
+    next-fn))
+
 (defn ->workflow
   [{:keys [first-step
-           step-fn
+           step-fns
            wire-fn
            next-fn]}]
   (fn workflow
     ([opts]
-     (workflow (or step-fn default-step-fn) opts))
-    ([step-fn opts]
-     (loop [step first-step
-            opts opts]
-       (let [[f next-step errmsg] (wire-fn step step-fn)
-             opts (try (step-fn {:f f
-                                 :step step
-                                 :opts opts})
-                       (catch Exception e
-                         (-> (if-let [ex-opts (ex-data e)]
-                               ex-opts
-                               opts)
-                             (merge {::bc/err (ex-message e)
-                                     ::bc/exit 1}))))
-             next-fn (if (keyword? next-fn)
-                       (fn [_ next-step opts]
-                         (if next-step
-                           (choice {:on-success next-step
-                                    :on-failure next-fn
-                                    :errmsg errmsg
-                                    :opts opts})
-                           [nil opts]))
-                       next-fn)
-             [next-step next-opts] (next-fn step next-step opts)]
-         (if next-step
-           (recur next-step next-opts)
-           next-opts))))))
-
-#_(->> ((->workflow {:first-step ::foo
-                     :wire-fn (fn [step _]
-                                (case step
-                                  ::foo [#(throw (Exception. "Java exception") #_%) ::end]
-                                  ::end [identity]))
-                     :next-fn ::end}) {::bar :baz})
-       (into (sorted-map)))
-
-#_(->> ((->workflow {:first-step ::foo
-                     :wire-fn (fn [step _]
-                                (case step
-                                  ::foo [#(throw (ex-info "Error" %)) ::end]
-                                  ::end [identity]))
-                     :next-fn ::end})
-        {::bar :baz})
-       (into (sorted-map)))
-
-#_(try (throw (Exception. "Java exception"))
-       (catch Exception e
-         ((juxt ex-message ex-data) e)))
+     (workflow (or step-fns []) opts))
+    ([step-fns opts]
+     (let [step-fns (resolve-step-fns step-fns)]
+       (loop [step first-step
+              opts opts]
+         (let [[f next-step errmsg] (wire-fn step step-fns)
+               f (compose step-fns f)
+               opts (try-f f step opts)
+               next-fn (resolve-next-fn next-fn errmsg)
+               [next-step next-opts] (next-fn step next-step opts)]
+           (if next-step
+             (recur next-step next-opts)
+             next-opts)))))))
 
 (def default-opts {:continue true
                    :out :string
@@ -158,42 +155,32 @@
   ([f single-step]
    (step->workflow f single-step nil))
   ([f single-step errmsg]
-   (fn workflow
-     ([opts]
-      (workflow default-step-fn opts))
-     ([step-fn opts]
-      (let [{:keys [::bc/exit] :as opts} (step-fn {:f f
-                                                   :step single-step
-                                                   :opts opts})]
-        (if (and errmsg (not= exit 0))
-          (assoc opts ::bc/err errmsg)
-          opts))))))
+   (->workflow {:first-step single-step
+                :wire-fn (fn [_ _]
+                           [f nil errmsg])
+                :next-fn single-step})))
 
 (defn exit-with-err-step-fn
-  [end {:keys [f step opts]}]
+  [end f step opts]
   (let [msg (step->message step)]
     (when msg
       (binding [*out* *err*]
         (println msg)))
-    (let [new-opts (default-step-fn {:f f
-                                     :step step
-                                     :opts opts})
+    (let [new-opts (f step opts)
           {:keys [::bc/exit]} new-opts]
-      (when (and (= step end) (not= exit 0))
-        (opts->exit new-opts))
-      new-opts)))
+      (if (and (= step end) (not= exit 0))
+        (opts->exit new-opts)
+        new-opts))))
 
 (defn exit-step-fn
-  [end {:keys [f step opts]}]
+  [end f step opts]
   (let [msg (step->message step)]
     (when msg
       (binding [*out* *err*]
         (println msg)))
-    (let [new-opts (default-step-fn {:f f
-                                     :step step
-                                     :opts opts})]
-      (when (= step end)
-        (opts->exit new-opts))
-      new-opts)))
+    (let [new-opts (f step opts)]
+      (if (= step end)
+        (opts->exit new-opts)
+        new-opts))))
 
 (comment)

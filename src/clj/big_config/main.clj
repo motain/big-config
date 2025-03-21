@@ -12,25 +12,30 @@
 
 (defn ^:export tofu [{[cmd module profile] :args
                       env :env
-                      step-fn :step-fn
-                      aero-step-fn :aero-step-fn}]
-  (let [step-fn (or step-fn exit-step-fn)
-        aero-step-fn (or aero-step-fn exit-with-err-step-fn)
-        read-module (step->workflow aero/read-module ::aero/read-module)
+                      step-fns :step-fns
+                      aero-step-fns :aero-step-fns}]
+  (let [step-fns (or step-fns [(case cmd
+                                 :opts             nil
+                                 (:init :plan)     (partial exit-step-fn ::run/end)
+                                 :lock             (partial exit-step-fn ::lock/end)
+                                 :unlock-any       (partial exit-step-fn ::lock/end)
+                                 (:apply :destroy) (partial exit-step-fn ::rwl/end))])
+        aero-step-fns (or aero-step-fns [(partial exit-with-err-step-fn ::aero/start)])
+        read-module (step->workflow aero/read-module ::aero/start)
         opts {::run/cmd (name cmd)
               ::bc/env (or env :shell)
               ::aero/config "big-config.edn"
               ::aero/module module
               ::aero/profile profile}
-        opts (read-module (partial aero-step-fn ::aero/read-module) opts)]
+        opts (read-module aero-step-fns opts)]
     (case cmd
       :opts             (pp/pprint (into (sorted-map) opts))
-      (:init :plan)     (run/run (partial step-fn ::run/end) opts)
+      (:init :plan)     (run/run step-fns opts)
       :lock             (do (println (step->message ::rwl/lock-acquire))
-                            (lock/lock (partial step-fn ::lock/end) opts))
+                            (lock/lock step-fns opts))
       :unlock-any       (do (println (step->message ::rwl/lock-release-any-owner))
-                            (unlock/unlock-any (partial step-fn ::lock/end) opts))
-      (:apply :destroy) (rwl/run-with-lock (partial step-fn ::rwl/end) opts))))
+                            (unlock/unlock-any step-fns opts))
+      (:apply :destroy) (rwl/run-with-lock step-fns opts))))
 
 (comment
   (->> (tofu {:args [:init :module-a :dev]

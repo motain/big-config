@@ -11,25 +11,25 @@
   (testing "false, conflict, success, different owner"
     (let [opts    default-opts
           xs      (atom [])
-          step-fn (partial test-step-fn #{::rwl/end} xs)]
-      (run-with-lock step-fn (assoc opts ::run/run-cmd "false"))
-      (run-with-lock step-fn (assoc opts ::lock/owner "CI2"))
-      (run-with-lock step-fn opts)
-      (run-with-lock step-fn (assoc opts ::lock/owner "CI2"))
+          step-fns [(partial test-step-fn #{::rwl/end} xs)]]
+      (run-with-lock step-fns (assoc opts ::run/run-cmd "false"))
+      (run-with-lock step-fns (assoc opts ::lock/owner "CI2"))
+      (run-with-lock step-fns opts)
+      (run-with-lock step-fns (assoc opts ::lock/owner "CI2"))
       (as-> @xs $
         (map ::bc/exit $)
         (is (= [1 1 0 0] $))))))
 
-(defn catch-all-step-fn [xs {:keys [f step opts]}]
+(defn catch-all-step-fn [xs f step opts]
   (swap! xs conj step opts)
-  (f opts))
+  (f step opts))
 
 (deftest step-fn-test
   (testing "the step-fn with step and opts"
     (let [opts    default-opts
           xs      (atom [])
-          step-fn (partial catch-all-step-fn xs)]
-      (run-with-lock step-fn opts)
+          step-fns [(partial catch-all-step-fn xs)]]
+      (run-with-lock step-fns opts)
       (is (= 50 (count @xs)))
       (is (every? (fn [x] (or (keyword? x)
                               (map? x))) @xs)))))

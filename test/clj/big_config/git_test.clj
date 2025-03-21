@@ -9,6 +9,8 @@
   (testing "git check test"
     (let [opts {}
           xs (atom [])
-          step-fn (partial test-step-fn #{::git/end} xs)]
-      (check step-fn opts)
-      (is (every? #(= (::bc/exit %) 0) @xs)))))
+          step-fns [(partial test-step-fn #{::git/end} xs)]]
+      (check step-fns opts)
+      (as-> @xs $
+        (map ::bc/exit $)
+        (is (= [0] $))))))

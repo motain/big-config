@@ -1,12 +1,15 @@
 (ns big-config.git
   (:require
    [big-config :as bc]
-   [big-config.utils :refer [->workflow choice generic-cmd]]))
+   [big-config.utils :refer [->workflow generic-cmd]]))
 
 (defn get-revision [revision key opts]
   (let [revision (cond
                    (string? revision) revision
-                   (keyword? revision) (revision opts))
+                   (keyword? revision) (revision opts)
+                   :else (throw (ex-info "Revision is neither a string nor a keyword" {:revision revision
+                                                                                       :key key
+                                                                                       :opts opts})))
         cmd (format "git rev-parse %s" revision)]
     (generic-cmd opts cmd key)))
 

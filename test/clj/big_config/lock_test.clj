@@ -10,10 +10,10 @@
   (testing "acquire and release lock"
     (let [opts default-opts
           xs (atom [])
-          step-fn (partial test-step-fn #{::lock/end ::unlock/end} xs)]
-      (lock step-fn opts)
-      (unlock-any step-fn opts)
-      (unlock-any step-fn opts)
+          step-fns [(partial test-step-fn #{::lock/end ::unlock/end} xs)]]
+      (lock step-fns opts)
+      (unlock-any step-fns opts)
+      (unlock-any step-fns opts)
       (is (= 3 (count @xs)))
       (is (every? #(= (::bc/exit %) 0) @xs)))))
 
@@ -21,10 +21,10 @@
   (testing "acquire an already locked module"
     (let [opts default-opts
           xs (atom [])
-          step-fn (partial test-step-fn #{::lock/end ::unlock/end} xs)]
-      (lock step-fn opts)
-      (lock step-fn (assoc opts ::lock/owner "CI2"))
-      (unlock-any step-fn opts)
+          step-fns [(partial test-step-fn #{::lock/end ::unlock/end} xs)]]
+      (lock step-fns opts)
+      (lock step-fns (assoc opts ::lock/owner "CI2"))
+      (unlock-any step-fns opts)
       (as-> @xs $
         (map ::bc/exit $)
         (is (= [0 1 0] $))))))
