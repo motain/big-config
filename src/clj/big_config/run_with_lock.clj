@@ -1,11 +1,10 @@
 (ns big-config.run-with-lock
   (:require
-   [big-config.aero :as aero]
+   [big-config.core :refer [->workflow git-push run-cmd]]
    [big-config.git :refer [check]]
    [big-config.lock :refer [lock]]
    [big-config.run :as run :refer [generate-main-tf-json]]
-   [big-config.unlock :refer [unlock-any]]
-   [big-config.core :refer [->workflow git-push run-cmd]]))
+   [big-config.unlock :refer [unlock-any]]))
 
 (def run-with-lock (->workflow {:first-step ::lock-acquire
                                 :wire-fn (fn [step step-fns]
@@ -20,24 +19,17 @@
                                 :next-fn ::end}))
 
 (comment
-  (let [step-fn (fn [{:keys [f _step opts]}]
-                  (let [{:keys [::run/cmd
-                                ::aero/module]} opts]
-                    (when (and (= cmd :destroy)
-                               (= module :prod))
-                      (throw (ex-info "You cannot destroy a production module" opts))))
-                  (f opts))]
-    (->> (run-with-lock step-fn #:big-config.lock {:aws-account-id "111111111111"
-                                                   :region "eu-west-1"
-                                                   :ns "test.module"
-                                                   :fn "invoke"
-                                                   :owner "CI"
-                                                   :lock-keys [:big-config.lock/aws-account-id
-                                                               :big-config.lock/region
-                                                               :big-config.lock/ns]
-                                                   :big-config.run/cmd :destroy
-                                                   :big-config.aero/module :prod
-                                                   :big-config.run/run-cmd "true"
-                                                   :big-config/test-mode true
-                                                   :big-config/env :repl})
-         (into (sorted-map)))))
+  (->> (run-with-lock #:big-config.lock {:aws-account-id "111111111111"
+                                         :region "eu-west-1"
+                                         :ns "test.module"
+                                         :fn "invoke"
+                                         :owner "CI"
+                                         :lock-keys [:big-config.lock/aws-account-id
+                                                     :big-config.lock/region
+                                                     :big-config.lock/ns]
+                                         :big-config.run/cmd :destroy
+                                         :big-config.aero/module :prod
+                                         :big-config.run/run-cmd "true"
+                                         :big-config/test-mode true
+                                         :big-config/env :repl})
+       (into (sorted-map))))

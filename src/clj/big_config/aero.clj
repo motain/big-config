@@ -3,6 +3,7 @@
    [aero.core :as aero]
    [big-config :as bc]
    [big-config.core :refer [deep-merge]]
+   [big-config.run :as run]
    [clojure.string :as str]))
 
 (defn ready?
@@ -57,3 +58,8 @@
                    {::bc/exit 0
                     ::bc/err nil})
             (recur config (atom true) (inc iteration))))))))
+
+(defn guardrail-step-fn [f _ {:keys [::run/cmd ::module] :as opts}]
+  (when (and (= cmd :destroy) (= module :prod))
+    (throw (ex-info "You cannot destroy a production module" opts)))
+  (f opts))

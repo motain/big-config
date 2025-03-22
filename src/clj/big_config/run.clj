@@ -1,8 +1,8 @@
 (ns big-config.run
   (:require
    [big-config :as bc]
-   [big-config.tofu :as tofu]
    [big-config.core :refer [->workflow run-cmd]]
+   [big-config.tofu :as tofu]
    [cheshire.core :as json]))
 
 (defn generate-main-tf-json [opts]

@@ -2,12 +2,12 @@
   (:require
    [big-config :as bc]
    [big-config.aero :as aero]
+   [big-config.core :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
    [big-config.lock :as lock]
    [big-config.msg :refer [step->message]]
    [big-config.run :as run]
    [big-config.run-with-lock :as rwl]
    [big-config.unlock :as unlock]
-   [big-config.core :refer [exit-step-fn exit-with-err-step-fn step->workflow]]
    [clojure.pprint :as pp]))
 
 (defn throw? [{:keys [::bc/exit] :as opts}]

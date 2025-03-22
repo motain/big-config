@@ -1,8 +1,8 @@
 (ns big-config.unlock
   (:require
+   [big-config.core :refer [->workflow]]
    [big-config.lock :refer [check-remote-tag delete-remote-tag delete-tag
-                            generate-lock-id]]
-   [big-config.core :refer [->workflow]]))
+                            generate-lock-id]]))
 
 (def unlock-any (->workflow {:first-step ::generate-lock-id
                              :wire-fn (fn [step _]
