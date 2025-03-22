@@ -15,9 +15,12 @@
                                      :ns "test.module"
                                      :fn "invoke"
                                      :owner "CI"
+                                     :isolation (or (System/getenv "ZELLIJ_SESSION_NAME") "CI")
                                      :lock-keys [:big-config.lock/aws-account-id
                                                  :big-config.lock/region
-                                                 :big-config.lock/ns]
+                                                 :big-config.lock/ns
+                                                 ;; to avoid to conflict with GitHub Actions and other develoers
+                                                 :big-config.lock/isolation]
                                      ::run/run-cmd "true"
                                      ::bc/test-mode true
                                      ::bc/env :repl})
