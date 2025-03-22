@@ -5,7 +5,7 @@
 (defn step->message
   "no require to avoid circular dependencies"
   [step]
-  (let [messages {:big-config.aero/read-module "Reading aero module"
+  (let [messages {:big-config.aero/start "Reading aero module"
                   :big-config.run/generate-main-tf-json "Generating main.tf.json file"
                   :big-config.run/run-cmd "Running tofu command"
                   :big-config.run-with-lock/lock-acquire "Acquiring lock"

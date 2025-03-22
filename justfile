@@ -16,11 +16,5 @@ get-caller-identity aws-account-id:
 [group('tofu')]
 tofu cmd module profile:
     #!/usr/bin/env bb
-    (require '[big-config.main :refer [tofu]]
-             '[big-config.utils :refer [exit-step-fn]])
-    (tofu {:args [:{{ cmd }} :{{ module }} :{{ profile }}]
-           :step-fn (fn [end {:keys [f step opts]}]
-                      (let [new-opts (exit-step-fn end {:f f
-                                                        :step step
-                                                        :opts opts})]
-                        new-opts))})
+    (require '[big-config.main :refer [tofu]])
+    (tofu {:args [:{{ cmd }} :{{ module }} :{{ profile }}]})
