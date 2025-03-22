@@ -38,18 +38,8 @@
 (deftest guardrail-step-fn-test
   (testing "Stop destroying a :prod module"
     (let [expect {:big-config/env :repl, :big-config/err "You cannot destroy a production module", :big-config/exit 1, :big-config/test-mode true, :big-config.aero/module :prod, :big-config.lock/aws-account-id "111111111111", :big-config.lock/fn "invoke", :big-config.lock/lock-keys [:big-config.lock/aws-account-id :big-config.lock/region :big-config.lock/ns], :big-config.lock/ns "test.module", :big-config.lock/owner "CI", :big-config.lock/region "eu-west-1", :big-config.run/cmd :destroy, :big-config.run/run-cmd "true"}
-          actual (->> (run-with-lock [guardrail-step-fn] #:big-config.lock {:aws-account-id "111111111111"
-                                                                            :region "eu-west-1"
-                                                                            :ns "test.module"
-                                                                            :fn "invoke"
-                                                                            :owner "CI"
-                                                                            :lock-keys [:big-config.lock/aws-account-id
-                                                                                        :big-config.lock/region
-                                                                                        :big-config.lock/ns]
-                                                                            :big-config.run/cmd :destroy
-                                                                            :big-config.aero/module :prod
-                                                                            :big-config.run/run-cmd "true"
-                                                                            :big-config/test-mode true
-                                                                            :big-config/env :repl})
+          actual (->> (run-with-lock [guardrail-step-fn] (merge default-opts
+                                                                {:big-config.run/cmd :destroy
+                                                                 :big-config.aero/module :prod}))
                       (into (sorted-map)))]
       (is (= expect actual)))))

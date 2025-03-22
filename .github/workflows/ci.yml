@@ -16,7 +16,6 @@ jobs:
   test:
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         java-version: ["8", "11", "17", "21"]
         os: [ubuntu, macOS, windows]
@@ -65,6 +64,8 @@ jobs:
           bb --version
 
       - name: Run big-config tests
+        env:
+          ZELLIJ_SESSION_NAME: test-${{ matrix.os }}-temurin-${{ matrix.java-version }}
         run: |
           clojure -M:test
 
