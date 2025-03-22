@@ -38,10 +38,8 @@
   "Step to read the opts from file or resource"
   [{:keys [::config ::module ::profile] :as opts}]
   (let [config (-> (aero/read-config config {:profile (or profile :default)})
-                   module
-                   (merge {::module module
-                           ::profile profile}))]
-    (loop [config (deep-merge opts config)
+                   module)]
+    (loop [config (deep-merge config opts)
            done (atom true)
            iteration 0]
       (let [config (update-vals config (fn [v]
