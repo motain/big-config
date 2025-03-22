@@ -37,7 +37,8 @@
 
 (deftest guardrail-step-fn-test
   (testing "Stop destroying a :prod module"
-    (let [expect {:big-config/env :repl, :big-config/err "You cannot destroy a production module", :big-config/exit 1, :big-config/test-mode true, :big-config.aero/module :prod, :big-config.lock/aws-account-id "111111111111", :big-config.lock/fn "invoke", :big-config.lock/lock-keys [:big-config.lock/aws-account-id :big-config.lock/region :big-config.lock/ns], :big-config.lock/ns "test.module", :big-config.lock/owner "CI", :big-config.lock/region "eu-west-1", :big-config.run/cmd :destroy, :big-config.run/run-cmd "true"}
+    (let [expect {:big-config/env :repl, :big-config/err "You cannot destroy a production module", :big-config/exit 1, :big-config/test-mode true, :big-config.aero/module :prod, :big-config.lock/aws-account-id "111111111111", :big-config.lock/fn "invoke" :big-config.lock/lock-keys [:big-config.lock/aws-account-id :big-config.lock/region :big-config.lock/ns :big-config.lock/isolation], :big-config.lock/ns "test.module", :big-config.lock/owner "CI", :big-config.lock/region "eu-west-1", :big-config.run/cmd :destroy, :big-config.run/run-cmd "true"
+                  :big-config.lock/isolation (or (System/getenv "ZELLIJ_SESSION_NAME") "CI")}
           actual (->> (run-with-lock [guardrail-step-fn] (merge default-opts
                                                                 {:big-config.run/cmd :destroy
                                                                  :big-config.aero/module :prod}))
