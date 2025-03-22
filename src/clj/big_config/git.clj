@@ -45,8 +45,7 @@
                                      ::current-revision [(partial get-revision "HEAD" ::current-revision) ::origin-revision]
                                      ::origin-revision [(partial get-revision ::upstream-name ::origin-revision) ::compare-revisions]
                                      ::compare-revisions [compare-revisions ::end]
-                                     ::end [identity]))
-                        :next-fn ::end}))
+                                     ::end [identity]))}))
 
 (comment
   (->> (check {})

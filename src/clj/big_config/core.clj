@@ -6,20 +6,6 @@
    [bling.core :refer [bling]]
    [clojure.string :as str]))
 
-(defn exit-with-code [n]
-  (shutdown-agents)
-  (flush)
-  (System/exit n))
-
-(defn deep-merge
-  "Recursively merges maps."
-  [& maps]
-  (letfn [(m [& xs]
-            (if (some #(and (map? %) (not (record? %))) xs)
-              (apply merge-with m xs)
-              (last xs)))]
-    (reduce m maps)))
-
 (defn choice [{:keys [on-success
                       on-failure
                       errmsg
@@ -54,12 +40,12 @@
              (merge {::bc/err (ex-message e)
                      ::bc/exit 1})))))
 
-(defn resolve-next-fn [next-fn errmsg]
-  (if (keyword? next-fn)
+(defn resolve-next-fn [next-fn last-step errmsg]
+  (if (nil? next-fn)
     (fn [_ next-step opts]
       (if next-step
         (choice {:on-success next-step
-                 :on-failure next-fn
+                 :on-failure last-step
                  :errmsg errmsg
                  :opts opts})
         [nil opts]))
@@ -71,24 +57,45 @@
            step-fns
            wire-fn
            next-fn]}]
-  (fn workflow
-    ([]
-     [first-step (or last-step
-                     (keyword (namespace first-step) "end"))])
-    ([opts]
-     (workflow (or step-fns []) opts))
-    ([step-fns opts]
-     (let [step-fns (resolve-step-fns step-fns)]
-       (loop [step first-step
-              opts opts]
-         (let [[f next-step errmsg] (wire-fn step step-fns)
-               f (compose step-fns f)
-               opts (try-f f step opts)
-               next-fn (resolve-next-fn next-fn errmsg)
-               [next-step next-opts] (next-fn step next-step opts)]
-           (if next-step
-             (recur next-step next-opts)
-             next-opts)))))))
+  (let [last-step (or last-step
+                      (keyword (namespace first-step) "end"))]
+    (fn workflow
+      ([]
+       [first-step last-step])
+      ([opts]
+       (workflow (or step-fns []) opts))
+      ([step-fns opts]
+       (let [step-fns (resolve-step-fns step-fns)]
+         (loop [step first-step
+                opts opts]
+           (let [[f next-step errmsg] (wire-fn step step-fns)
+                 f (compose step-fns f)
+                 opts (try-f f step opts)
+                 next-fn (resolve-next-fn next-fn last-step errmsg)
+                 [next-step next-opts] (next-fn step next-step opts)]
+             (if next-step
+               (recur next-step next-opts)
+               next-opts))))))))
+
+(defn step->workflow
+  ([f single-step]
+   (step->workflow f single-step nil))
+  ([f single-step errmsg]
+   (let [end-step (keyword (namespace single-step) "end")]
+     (->workflow {:first-step single-step
+                  :wire-fn (fn [step _]
+                             (cond
+                               (= step single-step) [f end-step errmsg]
+                               (= step end-step) [identity]))}))))
+
+(defn deep-merge
+  "Recursively merges maps."
+  [& maps]
+  (letfn [(m [& xs]
+            (if (some #(and (map? %) (not (record? %))) xs)
+              (apply merge-with m xs)
+              (last xs)))]
+    (reduce m maps)))
 
 (def default-opts {:continue true
                    :out :string
@@ -141,6 +148,11 @@
         proc (process/shell shell-opts run-cmd)]
     (handle-cmd opts proc)))
 
+(defn exit-with-code [n]
+  (shutdown-agents)
+  (flush)
+  (System/exit n))
+
 (defn opts->exit [opts]
   (let [{:keys [::bc/exit ::bc/env ::bc/err]} opts]
     (when (and (not= exit 0)
@@ -150,18 +162,6 @@
     (case env
       :shell (exit-with-code exit)
       :repl opts)))
-
-(defn step->workflow
-  ([f single-step]
-   (step->workflow f single-step nil))
-  ([f single-step errmsg]
-   (let [end-step (keyword (namespace single-step) "end")]
-     (->workflow {:first-step single-step
-                  :wire-fn (fn [step _]
-                             (cond
-                               (= step single-step) [f end-step errmsg]
-                               (= step end-step) [identity]))
-                  :next-fn end-step}))))
 
 (defn exit-with-err-step-fn
   [end f step opts]

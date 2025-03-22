@@ -15,8 +15,7 @@
                                              ::run-cmd [run-cmd ::git-push "The command executed with the lock failed"]
                                              ::git-push [git-push ::lock-release-any-owner]
                                              ::lock-release-any-owner [(partial unlock-any step-fns) ::end "Failed to release the lock"]
-                                             ::end [identity]))
-                                :next-fn ::end}))
+                                             ::end [identity]))}))
 
 (comment
   (->> (run-with-lock #:big-config.lock {:aws-account-id "111111111111"

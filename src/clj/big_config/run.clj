@@ -29,8 +29,7 @@
                                  (case step
                                    ::generate-main-tf-json [generate-main-tf-json ::run-cmd]
                                    ::run-cmd [run-cmd ::end]
-                                   ::end [identity nil]))
-                      :next-fn ::end}))
+                                   ::end [identity nil]))}))
 
 (comment
   (->> (run #:big-config.lock {:aws-account-id "111111111111"

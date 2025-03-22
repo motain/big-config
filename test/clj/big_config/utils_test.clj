@@ -55,8 +55,7 @@
                                                (case step
                                                  ::start [#(merge % {::bc/exit 0
                                                                      ::bc/err nil}) ::end]
-                                                 ::end [identity]))
-                                    :next-fn ::end}) {::bar :baz})
+                                                 ::end [identity]))}) {::bar :baz})
                       (into (sorted-map)))]
       (is (= expect actual)))))
 
