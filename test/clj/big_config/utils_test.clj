@@ -1,7 +1,7 @@
 (ns big-config.utils-test
   (:require
    [big-config :as bc]
-   [big-config.core :refer [->workflow step->workflow]]
+   [big-config.core :refer [->workflow]]
    [big-config.run :as run]
    [clojure.test :refer [deftest is testing]]))
 
@@ -24,16 +24,6 @@
                                      ::run/run-cmd "true"
                                      ::bc/test-mode true
                                      ::bc/env :repl})
-
-(deftest step->workflow-test
-  (testing "step->workflow"
-    (let [expected {:big-config.utils-test/foo :bar, :big-config/exit 1, :big-config/err "Error"}
-          f (fn [opts]
-              (merge opts
-                     {::bc/exit 1
-                      ::bc/err "Err"}))]
-      (as-> ((step->workflow f ::foo "Error") {::foo :bar}) $
-        (is (= expected $))))))
 
 (defn ^:export a-step-fn [f step opts]
   (let [opts (update opts ::bc/steps (fnil conj []) [step :start-a])
@@ -75,3 +65,7 @@
                      :next-fn ::end})
         {::bar :baz})
        (into (sorted-map)))
+
+#_(try (throw (Exception. "Java exception"))
+       (catch Exception e
+         [(apply str (interpose "\n" (map str (.getStackTrace e))))]))

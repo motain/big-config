@@ -3,7 +3,6 @@
    [aero.core :as aero]
    [big-config :as bc]
    [big-config.core :refer [deep-merge]]
-   [big-config.run :as run]
    [clojure.string :as str]))
 
 (defn ready?
@@ -43,10 +42,14 @@
            done (atom true)
            iteration 0]
       (let [config (update-vals config (fn [v]
-                                         (if (and (sequential? v)
-                                                  (= (first v) ::join))
-                                           (aero-join config (rest v) done)
-                                           v)))]
+                                         (cond
+                                           (and (sequential? v)
+                                                (= (first v) ::join)) (aero-join config (rest v) done)
+                                           (map? v) (update-vals v #(if (and (sequential? %)
+                                                                             (= (first %) ::join))
+                                                                      (aero-join config (rest %) done)
+                                                                      %))
+                                           :else v)))]
         (if (> iteration 100)
           (merge config
                  {::bc/exit 1
@@ -56,8 +59,3 @@
                    {::bc/exit 0
                     ::bc/err nil})
             (recur config (atom true) (inc iteration))))))))
-
-(defn guardrail-step-fn [f _ {:keys [::run/cmd ::module] :as opts}]
-  (when (and (= cmd :destroy) (= module :prod))
-    (throw (ex-info "You cannot destroy a production module" opts)))
-  (f opts))

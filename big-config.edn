@@ -1,21 +1,17 @@
-{:default {:big-config.tofu/aws-account-id "111111111111"
+{:default {:big-config.tofu/aws-account-id "251213589273"
            :big-config.tofu/region "eu-west-1"
-           :big-config.tofu/ns "namespace"
+           :big-config.tofu/ns "tofu.module-a.main"
            :big-config.tofu/fn "invoke"
            :big-config.lock/owner #or [#env ZELLIJ_SESSION_NAME "CI"]
            :big-config.lock/lock-keys [:big-config.tofu/aws-account-id
                                        :big-config.tofu/region
                                        :big-config.tofu/ns]
-           :big-config.run/working-dir [:big-config.aero/join
-                                        "tofu/"
-                                        :big-config.tofu/aws-account-id "/"
-                                        :big-config.tofu/region "/"
-                                        :big-config.tofu/ns]
-           :big-config.run/run-cmd [:big-config.aero/join
-                                    "bash -c 'cd "
-                                    :big-config.run/working-dir
-                                    " && direnv exec . tofu "
-                                    :big-config.run/cmd "'"]}
+           :big-config.run/extra-env {"AWS_PROFILE" [:big-config.aero/join
+                                                     :big-config.tofu/aws-account-id]}
+           :big-config.run/dir [:big-config.aero/join
+                                "tofu/"
+                                :big-config.tofu/aws-account-id "/"
+                                :big-config.aero/module]}
 
  :default-dev #merge [#ref [:default]
                       #:big-config.tofu {:aws-account-id "251213589273"}]
@@ -23,7 +19,5 @@
  :default-prod #merge [#ref [:default]
                        #:big-config.tofu {:aws-account-id "111111111111"}]
 
- :module-a #profile {:dev #merge [#ref [:default-dev]
-                                  #:big-config.tofu {:ns "tofu.module-a.main"}]
-                     :prod #merge [#ref [:default-prod]
-                                   #:big-config.tofu {:ns "tofu.module-a.main"}]}}
+ :alpha #profile {:dev #ref [:default-dev]
+                  :prod #ref [:default-prod]}}

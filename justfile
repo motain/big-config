@@ -12,9 +12,9 @@ get-caller-identity aws-account-id:
     cd tofu/{{ aws-account-id }} && \
     direnv exec . aws sts get-caller-identity
 
-# tofu init|plan|apply|destroy|lock|unlock-any
+# tofu opts|init|plan|apply|destroy|lock|unlock-any
 [group('tofu')]
-tofu cmd module profile:
+tofu action module profile:
     #!/usr/bin/env bb
-    (require '[big-config.main :refer [tofu]])
-    (tofu {:args [:{{ cmd }} :{{ module }} :{{ profile }}]})
+    (require '[big-config.tofu :refer [main]])
+    (main {:args [:{{ action }} :{{ module }} :{{ profile }}]})
