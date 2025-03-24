@@ -3,7 +3,8 @@
    [aero.core :as aero]
    [big-config :as bc]
    [big-config.utils :refer [deep-merge]]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [clojure.walk :as walk]))
 
 (defn ready?
   "All elements resolves to a string"
@@ -41,15 +42,10 @@
     (loop [config (deep-merge config opts)
            done (atom true)
            iteration 0]
-      (let [config (update-vals config (fn [v]
-                                         (cond
-                                           (and (sequential? v)
-                                                (= (first v) ::join)) (aero-join config (rest v) done)
-                                           (map? v) (update-vals v #(if (and (sequential? %)
-                                                                             (= (first %) ::join))
-                                                                      (aero-join config (rest %) done)
-                                                                      %))
-                                           :else v)))]
+      (let [config (walk/prewalk #(if (and (sequential? %)
+                                           (= (first %) ::join))
+                                    (aero-join config (rest %) done)
+                                    %) config)]
         (if (> iteration 100)
           (merge config
                  {::bc/exit 1
