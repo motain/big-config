@@ -18,7 +18,7 @@
                       #:big-config.tofu {:aws-account-id "251213589273"}]
 
  :default-prod #merge [#ref [:default]
-                       #:big-config.tofu {:aws-account-id "111111111111"}]
+                       #:big-config.tofu {:aws-account-id "251213589273"}]
 
  :alpha #profile {:dev #ref [:default-dev]
                   :prod #ref [:default-prod]}}

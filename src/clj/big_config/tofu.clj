@@ -6,11 +6,12 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.run :as run :refer [generic-cmd]]
-   [big-config.step-fns :refer [exit-step-fn trace-step-fn]]
+   [big-config.step-fns :refer [exit-step-fn tap-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
    [cheshire.core :as json]
    [clojure.pprint :as pp]
+   [clojure.string :as str]
    [selmer.parser :refer [<<]]))
 
 (defn ok [opts]
@@ -29,7 +30,9 @@
   (let [[lock-start-step] (lock/lock)
         [unlock-start-step] (unlock/unlock-any)
         [check-start-step] (git/check)
-        prefix "\ueabc"
+        [prefix color] (if (= exit 0)
+                         ["\ueabc" :green.bold]
+                         ["\uf05c" :red.bold])
         msg (cond
               (= step ::read-module) (<< "Action {{ action }} | Module {{ module }} | Profile {{ profile }}")
               (= step ::mkdir) (<< "Making dir {{ dir }}")
@@ -39,20 +42,25 @@
               (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
               (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
               (= step ::push) (<< "Pushing last commit")
+              (and (= step ::end)
+                   (> exit 0)
+                   (string? err)
+                   (not (str/blank? err))) (<< "{{ err }}")
               :else nil)];
     (when msg
       (binding [*out* *err*]
-        (println (bling [:green.bold (<< (str "{{ prefix }} " msg))])))))
+        (println (bling [color (<< (str "{{ prefix }} " msg))])))))
   (let [{:keys [::bc/err
                 ::bc/exit] :as opts} (f step opts)
         [_ check-end-step] (git/check)
         prefix "\uf05c"
         msg (cond
               (= step check-end-step) (<< "Working directory is NOT clean")
-              (= step ::run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
+              (= step ::run/run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
               :else nil)]
     (when (and msg (> exit 0))
-      (println (bling [:red.bold (<< (str "{{ prefix }} " msg))])))
+      (binding [*out* *err*]
+        (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))
     opts))
 
 (defn compile-tf [opts]
@@ -110,6 +118,14 @@
       (:init :plan) (run/run-cmds step-fns opts)
       (:apply :destroy :ci) (wf step-fns opts))))
 
+#_{:clj-kondo/ignore [:unused-binding]}
+(defn block-destroy-prod-step-fn [start-step f step {:keys [::action ::aero/module ::aero/profile] :as opts}]
+  (if (and (= step start-step)
+           (#{:destroy :ci} action)
+           (#{:prod :production} profile))
+    (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))
+    (f step opts)))
+
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
                       env :env}]
@@ -117,6 +133,7 @@
         module module
         profile profile
         step-fns (or step-fns [print-step-fn
+                               (partial block-destroy-prod-step-fn ::start)
                                (partial exit-step-fn ::end)])
         env (or env :shell)
         wf (->workflow {:first-step ::start
@@ -144,7 +161,12 @@
          (into (sorted-map)))))
 
 (comment
-  (main {:args [:plan :alpha :dev]
-         :step-fns [trace-step-fn
-                    print-step-fn]
-         :env :repl}))
+  (require '[user :refer [debug-atom]])
+  (main {:args [:ci :alpha :prod]
+         :step-fns [tap-step-fn
+                    print-step-fn
+                    (partial block-destroy-prod-step-fn ::start)]
+         :env :repl})
+
+  (reset! debug-atom [])
+  (-> debug-atom))

@@ -49,6 +49,33 @@
                       (into (sorted-map)))]
       (is (= expect actual)))))
 
+#_(let [trace (fn [f step opts]
+                (binding [*out* *err*]
+                  (println (bling [:blue.bold step])))
+                (f step (update opts ::bc/steps (fnil conj []) step)))
+
+        halt (fn [halt-step f step opts]
+               (if (= step halt-step)
+                 (throw (ex-info "Halt" opts))
+                 (f step opts)))
+        exit (fn [f step {:keys [::bc/err] :as opts}]
+               (when (= step ::end)
+                 (binding [*out* *err*]
+                   (println (bling [:red.bold err]))))
+               (f step opts))
+        wf (->workflow {:first-step ::start
+                        :step-fns [trace
+                                   (partial halt ::start)
+                                   exit]
+                        :wire-fn (fn [step _]
+                                   (case step
+                                     ::start [#(merge % {::bc/exit 0
+                                                         ::bc/err nil}) ::middle]
+                                     ::middle [#(merge % {::bc/exit 0
+                                                          ::bc/err nil}) ::end]
+                                     ::end [identity]))})]
+    (->> (wf {::bar :baz})
+         (into (sorted-map))))
 #_(->> ((->workflow {:first-step ::foo
                      :wire-fn (fn [step _]
                                 (case step

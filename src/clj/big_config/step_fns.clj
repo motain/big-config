@@ -1,7 +1,6 @@
 (ns big-config.step-fns
   (:require
-   [big-config :as bc]
-   [bling.core :refer [bling]]))
+   [big-config :as bc]))
 
 (defn exit-with-code [n]
   (shutdown-agents)
@@ -16,7 +15,8 @@
         :repl opts)
       opts)))
 
-(defn trace-step-fn [f step opts]
-  (binding [*out* *err*]
-    (println (bling [:blue.bold step])))
-  (f step (update opts ::bc/steps (fnil conj []) step)))
+(defn tap-step-fn [f step opts]
+  (tap> [step :before opts])
+  (let [opts (f step opts)]
+    (tap> [step :after opts])
+    opts))
