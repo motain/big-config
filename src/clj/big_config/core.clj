@@ -1,8 +1,6 @@
 (ns big-config.core
   (:require
-   [babashka.process :as process]
-   [big-config :as bc]
-   [clojure.string :as str]))
+   [big-config :as bc]))
 
 (defn choice [{:keys [on-success
                       on-failure
@@ -78,33 +76,6 @@
               (apply merge-with m xs)
               (last xs)))]
     (reduce m maps)))
-
-(def default-opts {:continue true
-                   :out :string
-                   :err :string})
-
-(defn handle-cmd [opts proc]
-  (let [res (-> (select-keys proc [:exit :out :err :cmd])
-                (update-vals (fn [v] (if (string? v)
-                                       (str/replace v #"\x1B\[[0-9;]+m" "")
-                                       v))))]
-
-    (-> opts
-        (update ::bc/procs (fnil conj []) res)
-        (merge (-> res
-                   (select-keys [:exit :err])
-                   (update-keys (fn [k] (keyword "big-config" (name k)))))))))
-
-(defn generic-cmd
-  ([opts cmd]
-   (let [proc (process/shell default-opts cmd)]
-     (handle-cmd opts proc)))
-  ([opts cmd key]
-   (let [proc (process/shell default-opts cmd)]
-     (-> opts
-         (assoc key (-> (:out proc)
-                        str/trim-newline))
-         (handle-cmd proc)))))
 
 (defn nested-sort-map [m]
   (cond
