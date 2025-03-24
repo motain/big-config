@@ -7,6 +7,7 @@
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.run :as run :refer [generic-cmd handle-cmd]]
+   [big-config.step-fns :refer [exit-step-fn trace-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
    [cheshire.core :as json]
@@ -16,24 +17,6 @@
 (defn ok [opts]
   (merge opts {::bc/exit 0
                ::bc/err nil}))
-
-(defn exit-with-code [n]
-  (shutdown-agents)
-  (flush)
-  (System/exit n))
-
-(defn exit-step-fn [end f step opts]
-  (let [{:keys [::bc/env ::bc/exit] :as opts} (f step opts)]
-    (if (= step end)
-      (case env
-        :shell (exit-with-code exit)
-        :repl opts)
-      opts)))
-
-(defn trace-step-fn [f step opts]
-  (binding [*out* *err*]
-    (println (bling [:blue.bold step])))
-  (f step (update opts ::bc/steps (fnil conj []) step)))
 
 #_{:clj-kondo/ignore [:unused-binding]}
 (defn print-step-fn [f step {:keys [::action
