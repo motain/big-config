@@ -2,8 +2,9 @@
   (:require
    [babashka.process :as process]
    [big-config :as bc]
-   [big-config.core :as utils :refer [->workflow choice nested-sort-map]]
+   [big-config.core :as utils :refer [->workflow choice]]
    [big-config.run :refer [generic-cmd handle-cmd]]
+   [big-config.utils :refer [nested-sort-map]]
    [clojure.edn :as edn]
    [clojure.string :as str]))
 

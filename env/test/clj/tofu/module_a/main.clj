@@ -1,7 +1,7 @@
 (ns tofu.module-a.main
   (:require
-   [big-config.core :as bc]
    [big-config.tofu :as tofu]
+   [big-config.utils :refer [deep-merge nested-sort-map]]
    [clojure.string :as str]
    [tofu.common.create-provider :as create-provider]
    [tofu.module-a.create-sqs :as create-sqs]))
@@ -23,8 +23,8 @@
                                        create-provider/invoke))]
     (->> [provider]
          (concat queues)
-         (apply bc/deep-merge)
-         bc/nested-sort-map)))
+         (apply deep-merge)
+         nested-sort-map)))
 
 (comment
   (-> {:aws-account-id "251213589273"
