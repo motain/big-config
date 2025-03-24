@@ -54,7 +54,9 @@
 
 (comment
   (run-cmds  {::bc/env :repl
-              ::shell-opts {:continue true}
-              ::cmds ["echo one"
-                      "echo two"
+              ::shell-opts {:continue true
+                            :dir "tofu"
+                            :extra-env {"FOO" "BAR"}}
+              ::cmds ["pwd"
+                      "bash -c 'echo $FOO'"
                       "echo three"]}))

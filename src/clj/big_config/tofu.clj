@@ -1,12 +1,11 @@
 (ns big-config.tofu
   (:require
-   [babashka.process :as process]
    [big-config :as bc]
    [big-config.aero :as aero]
    [big-config.core :refer [->workflow choice]]
    [big-config.git :as git]
    [big-config.lock :as lock]
-   [big-config.run :as run :refer [generic-cmd handle-cmd]]
+   [big-config.run :as run :refer [generic-cmd]]
    [big-config.step-fns :refer [exit-step-fn trace-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
@@ -38,7 +37,7 @@
               (= step unlock-start-step) (<< "Unlock any")
               (= step check-start-step) (<< "Checking if the working directory is clean {{ check-start-step }}")
               (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
-              (= step ::run-cmd) (<< "Running:\n> {{ cmds | first }}")
+              (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
               (= step ::push) (<< "Pushing last commit")
               :else nil)];
     (when msg
@@ -55,29 +54,6 @@
     (when (and msg (> exit 0))
       (println (bling [:red.bold (<< (str "{{ prefix }} " msg))])))
     opts))
-
-(defn run-cmd [shell-opts {:keys [::bc/env ::run/cmds] :as opts}]
-  (let [shell-opts (case env
-                     :shell shell-opts
-                     :repl (merge shell-opts {:out :string
-                                              :err :string}))
-        cmd (first cmds)
-        proc (process/shell shell-opts cmd)]
-    (handle-cmd opts proc)))
-
-(defn run-cmds [step-fns {:keys [::run/dir ::run/extra-env] :as opts}]
-  (let [wf (->workflow {:first-step ::run-cmd
-                        :last-step ::run-cmd
-                        :wire-fn (fn [step _]
-                                   (case step
-                                     ::run-cmd [(partial run-cmd {:continue true
-                                                                  :extra-env extra-env
-                                                                  :dir dir}) ::run-cmd]))
-                        :next-fn (fn [_ _ {:keys [::run/cmds] :as opts}]
-                                   (if (seq (rest cmds))
-                                     [::run-cmd (merge opts {::run/cmds (rest cmds)})]
-                                     [nil opts]))})]
-    (wf step-fns opts)))
 
 (defn compile-tf [opts]
   (let [{:keys [::bc/test-mode :big-config.tofu/fn :big-config.tofu/ns ::run/dir]} opts
@@ -114,7 +90,7 @@
                                    (case step
                                      ::check [(partial git/check step-fns) ::lock]
                                      ::lock [(partial lock/lock step-fns) ::run-cmds]
-                                     ::run-cmds [(partial run-cmds step-fns) ::push]
+                                     ::run-cmds [(partial run/run-cmds step-fns) ::push]
                                      ::push [(partial git-push step-fns) ::unlock]
                                      ::unlock [(partial unlock/unlock-any step-fns) ::action-end]
                                      ::action-end [identity]))
@@ -131,7 +107,7 @@
                 (ok opts))
       :lock (lock/lock step-fns opts)
       :unlock-any (unlock/unlock-any step-fns opts)
-      (:init :plan) (run-cmds step-fns opts)
+      (:init :plan) (run/run-cmds step-fns opts)
       (:apply :destroy :ci) (wf step-fns opts))))
 
 (defn ^:export main [{[action module profile] :args

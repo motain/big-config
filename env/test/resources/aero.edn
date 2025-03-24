@@ -7,7 +7,7 @@
                                        :big-config.tofu/region
                                        :big-config.tofu/ns]
            :big-config.run/shell-opts {:dir #ref [:default :big-config.run/dir]
-                                       :extra-var {"AWS_PROFILE" [:big-config.aero/join
+                                       :extra-env {"AWS_PROFILE" [:big-config.aero/join
                                                                   :big-config.tofu/aws-account-id]}}
            :big-config.run/dir [:big-config.aero/join
                                 "tofu/"

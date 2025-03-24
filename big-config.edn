@@ -1,4 +1,4 @@
-{:default {:big-config.tofu/aws-account-id "251213589273"
+{:default {:big-config.tofu/aws-account-id "111111111111"
            :big-config.tofu/region "eu-west-1"
            :big-config.tofu/ns "tofu.module-a.main"
            :big-config.tofu/fn "invoke"
@@ -6,8 +6,9 @@
            :big-config.lock/lock-keys [:big-config.tofu/aws-account-id
                                        :big-config.tofu/region
                                        :big-config.tofu/ns]
-           :big-config.run/extra-env {"AWS_PROFILE" [:big-config.aero/join
-                                                     :big-config.tofu/aws-account-id]}
+           :big-config.run/shell-opts {:dir #ref [:default :big-config.run/dir]
+                                       :extra-env {"AWS_PROFILE" [:big-config.aero/join
+                                                                  :big-config.tofu/aws-account-id]}}
            :big-config.run/dir [:big-config.aero/join
                                 "tofu/"
                                 :big-config.tofu/aws-account-id "/"
