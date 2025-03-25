@@ -46,7 +46,7 @@
                    (> exit 0)
                    (string? err)
                    (not (str/blank? err))) (<< "{{ err }}")
-              :else nil)];
+              :else nil)]
     (when msg
       (binding [*out* *err*]
         (println (bling [color (<< (str "{{ prefix }} " msg))])))))
