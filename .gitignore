@@ -3,4 +3,5 @@
 /.lsp/
 /.nrepl-port
 /tofu/*/*/.terraform
+/big-infra/tofu/*/*/.terraform
 /.envrc.private

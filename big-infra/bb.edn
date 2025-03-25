@@ -1,0 +1,2 @@
+{:paths ["src"]
+ :deps {amiorin/big-config {:local/root ".."}}}

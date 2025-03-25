@@ -128,6 +128,7 @@
 
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
+                      config :config
                       env :env}]
   (let [action action
         module module
@@ -155,7 +156,7 @@
                                                     :opts opts})))})]
     (->> (wf step-fns {::action action
                        ::bc/env (or env :shell)
-                       ::aero/config "big-config.edn"
+                       ::aero/config config
                        ::aero/module module
                        ::aero/profile profile})
          (into (sorted-map)))))

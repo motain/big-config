@@ -1,2 +1,0 @@
-{:paths ["env/test/clj"]
- :deps {amiorin/big-config {:local/root "."}}}
