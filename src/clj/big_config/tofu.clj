@@ -2,6 +2,7 @@
   (:require
    [big-config :as bc]
    [big-config.aero :as aero]
+   [big-config.call :as call]
    [big-config.core :refer [->workflow choice]]
    [big-config.git :as git]
    [big-config.lock :as lock]
@@ -9,7 +10,6 @@
    [big-config.step-fns :refer [exit-step-fn tap-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
-   [cheshire.core :as json]
    [clojure.pprint :as pp]
    [clojure.string :as str]
    [selmer.parser :refer [<<]]))
@@ -25,6 +25,7 @@
                                     ::lock/owner
                                     ::run/dir
                                     ::run/cmds
+                                    ::call/fns
                                     ::bc/err
                                     ::bc/exit] :as opts}]
   (let [[lock-start-step] (lock/lock)
@@ -33,6 +34,7 @@
         [prefix color] (if (= exit 0)
                          ["\ueabc" :green.bold]
                          ["\uf05c" :red.bold])
+        fn-desc (:desc (first fns))
         msg (cond
               (= step ::read-module) (<< "Action {{ action }} | Module {{ module }} | Profile {{ profile }}")
               (= step ::mkdir) (<< "Making dir {{ dir }}")
@@ -41,6 +43,7 @@
               (= step check-start-step) (<< "Checking if the working directory is clean {{ check-start-step }}")
               (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
               (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
+              (= step ::call/call-fn) (str "Calling fn: {{ fn-desc }}")
               (= step ::push) (<< "Pushing last commit")
               (and (= step ::end)
                    (> exit 0)
@@ -62,21 +65,6 @@
       (binding [*out* *err*]
         (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))
     opts))
-
-(defn compile-tf [opts]
-  (let [{:keys [::bc/test-mode :big-config.tofu/fn :big-config.tofu/ns ::run/dir]} opts
-        f (str dir "/main.tf.json")]
-    (if test-mode
-      (merge opts {::bc/exit 0
-                   ::bc/err nil})
-      (-> (format "%s/%s" ns fn)
-          (symbol)
-          requiring-resolve
-          (apply (vector opts))
-          (json/generate-string {:pretty true})
-          (->> (spit f))
-          (merge opts {::bc/exit 0
-                       ::bc/err nil})))))
 
 (defn action->opts [{:keys [::action] :as opts}]
   (-> (case action
@@ -142,8 +130,8 @@
                                    (case step
                                      ::start [action->opts ::read-module]
                                      ::read-module [aero/read-module ::mkdir]
-                                     ::mkdir [mkdir ::compile-tf]
-                                     ::compile-tf [compile-tf ::run-action]
+                                     ::mkdir [mkdir ::call-fns]
+                                     ::call-fns [(partial call/call-fns step-fns) ::run-action]
                                      ::run-action [(partial run-action step-fns) ::end]
                                      ::end [identity]))
                         :next-fn (fn [step next-step {:keys [::action] :as opts}]
@@ -163,7 +151,7 @@
 
 (comment
   (require '[user :refer [debug-atom]])
-  (main {:args [:ci :alpha :prod]
+  (main {:args [:plan :alpha :dev]
          :step-fns [tap-step-fn
                     print-step-fn
                     (partial block-destroy-prod-step-fn ::start)]

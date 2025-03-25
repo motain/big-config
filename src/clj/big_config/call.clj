@@ -1,7 +1,8 @@
 (ns big-config.call
   (:require
    [big-config :as bc]
-   [big-config.core :refer [->workflow]]))
+   [big-config.core :refer [->workflow]]
+   [cheshire.core :as json]))
 
 (defn call-fn [{:keys [::fns] :as opts}]
   (let [{:keys [f args]} (first fns)]
@@ -20,11 +21,21 @@
                             [::call-fn (merge opts {::fns (rest fns)})]
                             [nil opts]))}))
 
+(defn ^:export spit-json [{:keys [out f args]}]
+  (-> (symbol f)
+      requiring-resolve
+      (apply args)
+      (json/generate-string {:pretty true})
+      (->> (spit out))))
+
 (comment
   (call-fns [(fn [f step opts]
                (println step)
                (f step opts))]
-            {::fns [{:f "clojure.core/println"
-                     :args [:bar]}
-                    {:f "clojure.core/println"
-                     :args [:foo]}]}))
+            {::fns [{:f "big-config.call/spit-json"
+                     :desc "spit main.tf.json"
+                     :args [{:out "big-infra/tofu/251213589273/alpha/main.tf.json"
+                             :f "tofu.alpha.main/invoke"
+                             :args [{:aws-account-id "251213589273"
+                                     :region "eu-west-1"
+                                     :module :alpha}]}]}]}))

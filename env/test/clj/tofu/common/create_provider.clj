@@ -1,14 +1,7 @@
-(ns tofu.common.create-provider
-  (:require
-   [big-config.aero :as aero]
-   [big-config.tofu :as tofu]))
+(ns tofu.common.create-provider)
 
-(defn invoke [opts]
-  (let [{:keys [::tofu/region
-                ::tofu/bucket
-                ::aero/module
-                ::tofu/aws-account-id]} opts
-        key (str (name module) ".tfstate")]
+(defn invoke [{:keys [aws-account-id region bucket module]}]
+  (let [key (str (name module) ".tfstate")]
     {:provider {:aws [{:profile aws-account-id
                        :region region
                        :allowed_account_ids (vector aws-account-id)}]}

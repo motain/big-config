@@ -1,25 +1,18 @@
 (ns tofu.alpha.main
   (:require
-   [big-config.tofu :as tofu]
    [big-config.utils :refer [deep-merge nested-sort-map]]
    [clojure.string :as str]
-   [tofu.common.create-provider :as create-provider]
-   [tofu.alpha.create-sqs :as create-sqs]))
+   [tofu.alpha.create-sqs :as create-sqs]
+   [tofu.common.create-provider :as create-provider]))
 
-(defn ^:export invoke [opts]
-  {:post [(as-> % $
-            (get-in $ [:resource :aws_sqs_queue])
-            (count $)
-            (= 2 $))]}
-  (let [{:keys [::tofu/aws-account-id
-                ::tofu/region]} opts
-        bucket (str/join "-" (vector "tf-state" aws-account-id region))
+(defn invoke [{:keys [aws-account-id region] :as opts}]
+  (let [bucket (str/join "-" (vector "tf-state" aws-account-id region))
         queues (for [n (range 2)]
                  (create-sqs/invoke {:name (str "sqs-" n)}))
 
         provider (case aws-account-id
                    "251213589273"  (-> opts
-                                       (assoc ::tofu/bucket bucket)
+                                       (assoc :bucket bucket)
                                        create-provider/invoke))]
     (->> [provider]
          (concat queues)

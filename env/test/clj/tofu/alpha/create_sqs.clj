@@ -1,5 +1,4 @@
 (ns tofu.alpha.create-sqs)
 
-(defn invoke [opts]
-  (let [{:keys [name]} opts]
-    {:resource {:aws_sqs_queue {(keyword name) {:name name}}}}))
+(defn invoke [{:keys [name]}]
+  {:resource {:aws_sqs_queue {(keyword name) {:name name}}}})
