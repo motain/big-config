@@ -1,10 +1,10 @@
-(ns tofu.module-a.main
+(ns tofu.alpha.main
   (:require
    [big-config.tofu :as tofu]
    [big-config.utils :refer [deep-merge nested-sort-map]]
    [clojure.string :as str]
    [tofu.common.create-provider :as create-provider]
-   [tofu.module-a.create-sqs :as create-sqs]))
+   [tofu.alpha.create-sqs :as create-sqs]))
 
 (defn ^:export invoke [opts]
   {:post [(as-> % $

@@ -4,7 +4,8 @@
    [big-config :as bc]
    [big-config.utils :refer [deep-merge]]
    [clojure.string :as str]
-   [clojure.walk :as walk]))
+   [clojure.walk :as walk]
+   [selmer.parser :refer [<<]]))
 
 (defn ready?
   "All elements resolves to a string"
@@ -37,8 +38,12 @@
 (defn read-module
   "Step to read the opts from file or resource"
   [{:keys [::config ::module ::profile] :as opts}]
-  (let [config (-> (aero/read-config config {:profile (or profile :default)})
+  #_{:clj-kondo/ignore [:unused-binding]}
+  (let [config-name (str config)
+        config (-> (aero/read-config config {:profile (or profile :default)})
                    module)]
+    (when (nil? config)
+      (throw (ex-info (<< "Module {{ module }} does not exist in config {{ config-name }}") {})))
     (loop [config (deep-merge config opts)
            done (atom true)
            iteration 0]

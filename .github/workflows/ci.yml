@@ -73,4 +73,4 @@ jobs:
 
       - name: Run big-config tests
         run: |
-          just tofu opts module-a dev
+          just tofu opts alpha dev
