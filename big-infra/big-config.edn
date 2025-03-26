@@ -1,17 +1,26 @@
 {:default {:big-config.tofu/aws-account-id "111111111111"
            :big-config.tofu/region "eu-west-1"
-           :big-config.call/fns [{:f "big-config.call/spit-json"
+           :big-config.call/fns [{:f "big-config.call/mkdir-and-spit"
                                   :desc "spit main.tf.json"
                                   :args [{:out  [:big-config.aero/join
                                                  :big-config.run/dir
                                                  "/main.tf.json"]
                                           :f "tofu.alpha.main/invoke"
+                                          :type :json
                                           :args [{:aws-account-id [:big-config.aero/join
                                                                    :big-config.tofu/aws-account-id]
                                                   :region [:big-config.aero/join
                                                            :big-config.tofu/region]
                                                   :module [:big-config.aero/join
-                                                           :big-config.aero/module]}]}]}]
+                                                           :big-config.aero/module]}]}]}
+                                 {:f "big-config.call/mkdir-and-spit"
+                                  :desc "spit user_data.sh"
+                                  :args [{:out  [:big-config.aero/join
+                                                 :big-config.run/dir
+                                                 "/files/user_data.sh"]
+                                          :type :text
+                                          :f "tofu.alpha.user-data/invoke"
+                                          :args []}]}]
            :big-config.lock/owner #or [#env ZELLIJ_SESSION_NAME "CI"]
            :big-config.lock/lock-keys [:big-config.tofu/aws-account-id
                                        :big-config.tofu/region
