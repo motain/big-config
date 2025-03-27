@@ -5,6 +5,10 @@ AWS_PROFILE := "251213589273"
 help:
     @just -f {{ justfile() }} --list --unsorted
 
+# clj test
+test:
+    clojure -M:test
+
 # check the AWS identity
 [group('tofu')]
 get-caller-identity:

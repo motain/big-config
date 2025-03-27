@@ -41,25 +41,35 @@
         proc (process/shell shell-opts cmd)]
     (handle-cmd opts proc)))
 
+(defn push-nil [{:keys [::cmds] :as opts}]
+  (let [cmds (if (seq cmds)
+               (conj (seq cmds) nil)
+               [nil])]
+    (assoc opts ::cmds cmds)))
+
 (def run-cmds
-  (->workflow {:first-step ::run-cmd
-               :last-step ::run-cmd
+  (->workflow {:first-step ::start
                :wire-fn (fn [step _]
                           (case step
+                            ::start [push-nil ::run-cmd]
                             ::run-cmd [run-cmd ::run-cmd]
                             ::end [identity]))
                :next-fn (fn [step _ {:keys [::bc/exit ::cmds] :as opts}]
                           (cond
                             (and (seq (rest cmds))
-                                 (= exit 0)) [::run-cmd (merge opts {::cmds (rest cmds)})]
+                                 (or (= exit 0)
+                                     (nil? exit))) [::run-cmd (merge opts {::cmds (rest cmds)})]
                             (= step ::end) [nil opts]
                             :else [::end opts]))}))
 
-(comment)
-(run-cmds  {::bc/env :repl
-            ::shell-opts {:continue true
-                          :dir "tofu"
-                          :extra-env {"FOO" "BAR"}}
-            ::cmds ["pwd"
-                    "bash -c 'echo $FOO'"
-                    "echo three"]})
+(comment
+  (run-cmds [(fn [f step opts]
+               (println step)
+               (f step opts))]
+            {::bc/env :repl
+             ::shell-opts {:continue true
+                           :dir "big-infra"
+                           :extra-env {"FOO" "BAR"}}
+             ::cmds ["pwd"
+                     "bash -c 'echo $FOO'"
+                     "echo three"]}))

@@ -13,17 +13,24 @@
     (merge opts {::bc/exit 0
                  ::bc/err nil})))
 
+(defn push-nil [{:keys [::fns] :as opts}]
+  (let [fns (if (seq fns)
+              (conj (seq fns) nil)
+              [nil])]
+    (assoc opts ::fns fns)))
+
 (def call-fns
-  (->workflow {:first-step ::call-fn
-               :last-step ::call-fn
+  (->workflow {:first-step ::start
                :wire-fn (fn [step _]
                           (case step
+                            ::start [push-nil ::call-fn]
                             ::call-fn [call-fn ::call-fn]
                             ::end [identity]))
                :next-fn (fn [step _ {:keys [::bc/exit ::fns] :as opts}]
                           (cond
                             (and (seq (rest fns))
-                                 (= exit 0)) [::call-fn (merge opts {::fns (rest fns)})]
+                                 (or (= exit 0)
+                                     (nil? exit))) [::call-fn (merge opts {::fns (rest fns)})]
                             (= step ::end) [nil opts]
                             :else [::end opts]))}))
 
