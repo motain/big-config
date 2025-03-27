@@ -154,6 +154,7 @@
 (comment
   (require '[user :refer [debug-atom]])
   (main {:args [:plan :alpha :dev]
+         :config "big-infra/big-config.edn"
          :step-fns [tap-step-fn
                     print-step-fn
                     (partial block-destroy-prod-step-fn ::start)]

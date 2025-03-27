@@ -18,6 +18,7 @@
 (deftest read-module-break-loop-test
   (testing "Read module and break the loop"
     (as-> (read-module {::aero/config (io/resource "aero-loop.edn")
+                        ::aero/profile :dev
                         ::aero/module :alpha}) $
       (::bc/exit $)
       (is (= 1 $)))))

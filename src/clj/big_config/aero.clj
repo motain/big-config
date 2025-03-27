@@ -38,6 +38,8 @@
 (defn read-module
   "Step to read the opts from file or resource"
   [{:keys [::config ::module ::profile] :as opts}]
+  (when (some nil? [config module profile])
+    (throw (ex-info "Either config, module, or profile are nil" opts)))
   #_{:clj-kondo/ignore [:unused-binding]}
   (let [config-name (str config)
         config (-> (aero/read-config config {:profile (or profile :default)})
