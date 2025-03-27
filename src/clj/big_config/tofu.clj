@@ -89,7 +89,7 @@
                                      ::check [(partial git/check step-fns) ::lock]
                                      ::lock [(partial lock/lock step-fns) ::run-cmds]
                                      ::run-cmds [(partial run/run-cmds step-fns) ::push]
-                                     ::push [(partial git-push step-fns) ::unlock]
+                                     ::push [git-push ::unlock]
                                      ::unlock [(partial unlock/unlock-any step-fns) ::action-end]
                                      ::action-end [identity]))
                         :next-fn (fn [step next-step opts]
