@@ -16,11 +16,16 @@
 (def call-fns
   (->workflow {:first-step ::call-fn
                :last-step ::call-fn
-               :wire-fn (constantly [call-fn ::call-fn])
-               :next-fn (fn [_ _ {:keys [::fns] :as opts}]
-                          (if (seq (rest fns))
-                            [::call-fn (merge opts {::fns (rest fns)})]
-                            [nil opts]))}))
+               :wire-fn (fn [step _]
+                          (case step
+                            ::call-fn [call-fn ::call-fn]
+                            ::end [identity]))
+               :next-fn (fn [step _ {:keys [::bc/exit ::fns] :as opts}]
+                          (cond
+                            (and (seq (rest fns))
+                                 (= exit 0)) [::call-fn (merge opts {::fns (rest fns)})]
+                            (= step ::end) [nil opts]
+                            :else [::end opts]))}))
 
 (defn ^:export mkdir-and-spit [{:keys [out type f args]}]
   (-> (fs/parent out)

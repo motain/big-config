@@ -46,17 +46,20 @@
                :last-step ::run-cmd
                :wire-fn (fn [step _]
                           (case step
-                            ::run-cmd [run-cmd ::run-cmd]))
-               :next-fn (fn [_ _ {:keys [::cmds] :as opts}]
-                          (if (seq (rest cmds))
-                            [::run-cmd (merge opts {::cmds (rest cmds)})]
-                            [nil opts]))}))
+                            ::run-cmd [run-cmd ::run-cmd]
+                            ::end [identity]))
+               :next-fn (fn [step _ {:keys [::bc/exit ::cmds] :as opts}]
+                          (cond
+                            (and (seq (rest cmds))
+                                 (= exit 0)) [::run-cmd (merge opts {::cmds (rest cmds)})]
+                            (= step ::end) [nil opts]
+                            :else [::end opts]))}))
 
-(comment
-  (run-cmds  {::bc/env :repl
-              ::shell-opts {:continue true
-                            :dir "tofu"
-                            :extra-env {"FOO" "BAR"}}
-              ::cmds ["pwd"
-                      "bash -c 'echo $FOO'"
-                      "echo three"]}))
+(comment)
+(run-cmds  {::bc/env :repl
+            ::shell-opts {:continue true
+                          :dir "tofu"
+                          :extra-env {"FOO" "BAR"}}
+            ::cmds ["pwd"
+                    "bash -c 'echo $FOO'"
+                    "echo three"]})

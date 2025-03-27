@@ -1,7 +1,7 @@
 (ns tofu.alpha.user-data
   (:require
-   [selmer.parser :refer [<<]]
-   [clojure.java.io :as io]))
+   [clojure.java.io :as io]
+   [selmer.parser :refer [<<]]))
 
 (def text "Hello world!")
 
