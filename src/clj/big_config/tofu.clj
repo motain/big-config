@@ -43,7 +43,7 @@
                                         (= step ::mkdir) (<< "Making dir {{ dir }}")
                                         (= step lock-start-step) (<< "Lock (owner {{ owner }})")
                                         (= step unlock-start-step) (<< "Unlock any")
-                                        (= step check-start-step) (<< "Checking if the working directory is clean {{ check-start-step }}")
+                                        (= step check-start-step) (<< "Checking if the working directory is clean")
                                         (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
                                         (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
                                         (= step ::call/call-fn) (str "Calling fn: {{ fn-desc }}")
@@ -63,7 +63,8 @@
                                      (= step check-end-step) (<< "Working directory is NOT clean")
                                      (= step ::run/run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
                                      :else nil)]
-                           (when (and msg (> exit 0))
+                           (when (and msg
+                                      (> exit 0))
                              (binding [*out* *err*]
                                (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))))}))
 
