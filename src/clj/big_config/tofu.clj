@@ -3,11 +3,11 @@
    [big-config :as bc]
    [big-config.aero :as aero]
    [big-config.call :as call]
-   [big-config.core :refer [->workflow choice]]
+   [big-config.core :refer [->step-fn ->workflow choice]]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.run :as run :refer [generic-cmd]]
-   [big-config.step-fns :refer [exit-step-fn tap-step-fn]]
+   [big-config.step-fns :refer [->exit-step-fn tap-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
    [clojure.pprint :as pp]
@@ -20,53 +20,52 @@
                ::bc/err nil}))
 
 #_{:clj-kondo/ignore [:unused-binding]}
-(defn print-step-fn [f step {:keys [::action
-                                    ::aero/module
-                                    ::aero/profile
-                                    ::lock/owner
-                                    ::run/dir
-                                    ::run/cmds
-                                    ::call/fns
-                                    ::bc/err
-                                    ::bc/exit] :as opts}]
-  (binding [util/*escape-variables* false]
-    (let [[lock-start-step] (lock/lock)
-          [unlock-start-step] (unlock/unlock-any)
-          [check-start-step] (git/check)
-          [prefix color] (if (= exit 0)
-                           ["\ueabc" :green.bold]
-                           ["\uf05c" :red.bold])
-          fn-desc (:desc (first fns))
-          msg (cond
-                (= step ::read-module) (<< "Action {{ action }} | Module {{ module }} | Profile {{ profile }}")
-                (= step ::mkdir) (<< "Making dir {{ dir }}")
-                (= step lock-start-step) (<< "Lock (owner {{ owner }})")
-                (= step unlock-start-step) (<< "Unlock any")
-                (= step check-start-step) (<< "Checking if the working directory is clean {{ check-start-step }}")
-                (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
-                (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
-                (= step ::call/call-fn) (str "Calling fn: {{ fn-desc }}")
-                (= step ::push) (<< "Pushing last commit")
-                (and (= step ::end)
-                     (> exit 0)
-                     (string? err)
-                     (not (str/blank? err))) (<< "{{ err }}")
-                :else nil)]
-      (when msg
-        (binding [*out* *err*]
-          (println (bling [color (<< (str "{{ prefix }} " msg))]))))))
-  (let [{:keys [::bc/err
-                ::bc/exit] :as opts} (f step opts)
-        [_ check-end-step] (git/check)
-        prefix "\uf05c"
-        msg (cond
-              (= step check-end-step) (<< "Working directory is NOT clean")
-              (= step ::run/run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
-              :else nil)]
-    (when (and msg (> exit 0))
-      (binding [*out* *err*]
-        (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))
-    opts))
+(def print-step-fn
+  (->step-fn {:before-f (fn [step {:keys [::action
+                                          ::aero/module
+                                          ::aero/profile
+                                          ::lock/owner
+                                          ::run/dir
+                                          ::run/cmds
+                                          ::call/fns
+                                          ::bc/err
+                                          ::bc/exit]}]
+                          (binding [util/*escape-variables* false]
+                            (let [[lock-start-step] (lock/lock)
+                                  [unlock-start-step] (unlock/unlock-any)
+                                  [check-start-step] (git/check)
+                                  [prefix color] (if (= exit 0)
+                                                   ["\ueabc" :green.bold]
+                                                   ["\uf05c" :red.bold])
+                                  fn-desc (:desc (first fns))
+                                  msg (cond
+                                        (= step ::read-module) (<< "Action {{ action }} | Module {{ module }} | Profile {{ profile }}")
+                                        (= step ::mkdir) (<< "Making dir {{ dir }}")
+                                        (= step lock-start-step) (<< "Lock (owner {{ owner }})")
+                                        (= step unlock-start-step) (<< "Unlock any")
+                                        (= step check-start-step) (<< "Checking if the working directory is clean {{ check-start-step }}")
+                                        (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
+                                        (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
+                                        (= step ::call/call-fn) (str "Calling fn: {{ fn-desc }}")
+                                        (= step ::push) (<< "Pushing last commit")
+                                        (and (= step ::end)
+                                             (> exit 0)
+                                             (string? err)
+                                             (not (str/blank? err))) (<< "{{ err }}")
+                                        :else nil)]
+                              (when msg
+                                (binding [*out* *err*]
+                                  (println (bling [color (<< (str "{{ prefix }} " msg))])))))))
+              :after-f (fn [step {:keys [::run/cmds ::bc/err ::bc/exit]}]
+                         (let [[_ check-end-step] (git/check)
+                               prefix "\uf05c"
+                               msg (cond
+                                     (= step check-end-step) (<< "Working directory is NOT clean")
+                                     (= step ::run/run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
+                                     :else nil)]
+                           (when (and msg (> exit 0))
+                             (binding [*out* *err*]
+                               (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))))}))
 
 (defn action->opts [{:keys [::action] :as opts}]
   (-> (case action
@@ -109,12 +108,12 @@
       (:apply :destroy :ci) (wf step-fns opts))))
 
 #_{:clj-kondo/ignore [:unused-binding]}
-(defn block-destroy-prod-step-fn [start-step f step {:keys [::action ::aero/module ::aero/profile] :as opts}]
-  (if (and (= step start-step)
-           (#{:destroy :ci} action)
-           (#{:prod :production} profile))
-    (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))
-    (f step opts)))
+(defn block-destroy-prod-step-fn [start-step]
+  (->step-fn {:before-fn (fn [step {:keys [::action ::aero/module ::aero/profile] :as opts}]
+                           (when (and (= step start-step)
+                                      (#{:destroy :ci} action)
+                                      (#{:prod :production} profile))
+                             (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))))}))
 
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
@@ -124,8 +123,8 @@
         module module
         profile profile
         step-fns (or step-fns [print-step-fn
-                               (partial block-destroy-prod-step-fn ::start)
-                               (partial exit-step-fn ::end)])
+                               (block-destroy-prod-step-fn ::start)
+                               (->exit-step-fn ::end)])
         env (or env :shell)
         wf (->workflow {:first-step ::start
                         :wire-fn (fn [step step-fns]

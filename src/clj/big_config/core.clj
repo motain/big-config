@@ -68,4 +68,16 @@
                (recur next-step next-opts)
                next-opts))))))))
 
+(defn ->step-fn [{:keys [before-f after-f]}]
+  (fn [f step opts]
+    (when before-f
+      (before-f step opts))
+    (let [opts (f step opts)
+          after-f (case after-f
+                    nil (fn [_ _])
+                    :same before-f
+                    after-f)]
+      (after-f step opts)
+      opts)))
+
 (comment)
