@@ -156,7 +156,8 @@
          :config "big-infra/big-config.edn"
          :step-fns [tap-step-fn
                     print-step-fn
-                    (partial block-destroy-prod-step-fn ::start)]
+                    (block-destroy-prod-step-fn ::start)
+                    (->exit-step-fn ::end)]
          :env :repl})
 
   (reset! debug-atom [])
