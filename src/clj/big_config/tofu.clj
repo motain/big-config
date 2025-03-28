@@ -70,7 +70,7 @@
 
 (defn action->opts [{:keys [::action] :as opts}]
   (-> (case action
-        (:opts :lock :unlock-any) opts
+        (:clean :opts :lock :unlock-any) opts
         (:init :plan :apply :destroy) (merge opts {::run/cmds [(format "tofu %s" (name action))]})
         :ci (merge opts {::run/cmds ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]}))
       ok))
@@ -103,6 +103,7 @@
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
                 (ok opts))
+      :clean (run/run-cmds step-fns (assoc opts ::run/cmds ["rm -rf .terraform"]))
       :lock (lock/lock step-fns opts)
       :unlock-any (unlock/unlock-any step-fns opts)
       (:init :plan) (run/run-cmds step-fns opts)
@@ -139,6 +140,8 @@
                         :next-fn (fn [step next-step {:keys [::action] :as opts}]
                                    (cond
                                      (= step ::end) [nil opts]
+                                     (and (= action :clean)
+                                          (= step ::mkdir))  [::run-action opts]
                                      (and (= step ::read-module)
                                           (#{:opts :lock :unlock-any} action)) [::run-action opts]
                                      :else (choice {:on-success next-step
@@ -153,7 +156,7 @@
 
 (comment
   (require '[user :refer [debug-atom]])
-  (main {:args [:plan :alpha :dev]
+  (main {:args [:clean :alpha :dev]
          :config "big-infra/big-config.edn"
          :step-fns [tap-step-fn
                     print-step-fn
