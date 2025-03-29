@@ -2,10 +2,12 @@ set export
 
 AWS_PROFILE := "251213589273"
 
+# list of all recipes
 help:
     @just -f {{ justfile() }} --list --unsorted
 
-# clj test
+# test big-config
+[group('clojure')]
 test:
     clojure -M:test
 
@@ -22,6 +24,7 @@ tofu action module profile:
     (main {:args [:{{ action }} :{{ module }} :{{ profile }}]
            :config "big-infra/big-config.edn"})
 
+# invoked by recipe test
 [group('private')]
 test-wf-exit:
     #!/usr/bin/env -S bb --config big-infra/bb.edn -cp src/clj:test/clj

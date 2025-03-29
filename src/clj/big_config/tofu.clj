@@ -1,13 +1,14 @@
 (ns big-config.tofu
   (:require
    [big-config :as bc]
+   [big-config.action :as action]
    [big-config.aero :as aero]
    [big-config.call :as call]
    [big-config.core :refer [->step-fn ->workflow choice ok]]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.run :as run :refer [generic-cmd]]
-   [big-config.step-fns :refer [->exit-step-fn tap-step-fn]]
+   [big-config.step-fns :refer [->exit-step-fn log-step-fn tap-step-fn]]
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
    [clojure.pprint :as pp]
@@ -58,31 +59,6 @@
 (defn mkdir [{:keys [::run/dir] :as opts}]
   (generic-cmd opts (format "mkdir -p %s" dir)))
 
-(defn git-push [opts]
-  (generic-cmd opts "git push"))
-
-(def lock-action
-  (fn [action step-fns opts]
-    (let [wf (->workflow {:first-step ::check
-                          :last-step ::action-end
-                          :wire-fn (fn [step step-fns]
-                                     (case step
-                                       ::check [(partial git/check step-fns) ::lock]
-                                       ::lock [(partial lock/lock step-fns) ::run-cmds]
-                                       ::run-cmds [(partial run/run-cmds step-fns) ::push]
-                                       ::push [git-push ::unlock]
-                                       ::unlock [(partial unlock/unlock-any step-fns) ::action-end]
-                                       ::action-end [identity]))
-                          :next-fn (fn [step next-step opts]
-                                     (cond
-                                       (= step ::action-end) [nil opts]
-                                       (and (= step ::run-cmds)
-                                            (= action :ci)) [::unlock opts]
-                                       :else (choice {:on-success next-step
-                                                      :on-failure ::action-end
-                                                      :opts opts})))})]
-      (wf step-fns opts))))
-
 (defn run-action [step-fns {:keys [::action] :as opts}]
   (let [opts (assoc opts ::run/cmds (case action
                                       :clean ["rm -rf .terraform"]
@@ -92,11 +68,12 @@
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
                 (ok opts))
-      :clean (run/run-cmds step-fns opts)
-      :lock (lock/lock step-fns opts)
-      :unlock-any (unlock/unlock-any step-fns opts)
-      (:init :plan) (run/run-cmds step-fns opts)
-      (:apply :destroy :ci) (lock-action action step-fns opts))))
+      (apply (case action
+               :clean run/run-cmds
+               :lock lock/lock
+               :unlock-any unlock/unlock-any
+               (:init :plan) run/run-cmds
+               (:apply :destroy :ci) (partial action/run-action-with-lock action)) [step-fns opts]))))
 
 (defn block-destroy-prod-step-fn [start-step]
   (->step-fn {:before-f (fn [step {:keys [::action ::aero/profile] :as opts}]
@@ -105,6 +82,27 @@
                                        (#{:destroy :ci} action)
                                        (#{:prod :production} profile))
                               (throw (ex-info msg opts)))))}))
+
+(def run-tofu
+  (->workflow {:first-step ::start
+               :wire-fn (fn [step step-fns]
+                          (case step
+                            ::start [ok ::read-module]
+                            ::read-module [aero/read-module ::mkdir]
+                            ::mkdir [mkdir ::call-fns]
+                            ::call-fns [(partial call/call-fns step-fns) ::run-action]
+                            ::run-action [(partial run-action step-fns) ::end]
+                            ::end [identity]))
+               :next-fn (fn [step next-step {:keys [::action] :as opts}]
+                          (cond
+                            (= step ::end) [nil opts]
+                            (and (= action :clean)
+                                 (= step ::mkdir))  [::run-action opts]
+                            (and (= step ::read-module)
+                                 (#{:opts :lock :unlock-any} action)) [::run-action opts]
+                            :else (choice {:on-success next-step
+                                           :on-failure ::end
+                                           :opts opts})))}))
 
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
@@ -116,38 +114,20 @@
         step-fns (or step-fns [print-step-fn
                                (block-destroy-prod-step-fn ::start)
                                (->exit-step-fn ::end)])
-        env (or env :shell)
-        wf (->workflow {:first-step ::start
-                        :wire-fn (fn [step step-fns]
-                                   (case step
-                                     ::start [#(ok %) ::read-module]
-                                     ::read-module [aero/read-module ::mkdir]
-                                     ::mkdir [mkdir ::call-fns]
-                                     ::call-fns [(partial call/call-fns step-fns) ::run-action]
-                                     ::run-action [(partial run-action step-fns) ::end]
-                                     ::end [identity]))
-                        :next-fn (fn [step next-step {:keys [::action] :as opts}]
-                                   (cond
-                                     (= step ::end) [nil opts]
-                                     (and (= action :clean)
-                                          (= step ::mkdir))  [::run-action opts]
-                                     (and (= step ::read-module)
-                                          (#{:opts :lock :unlock-any} action)) [::run-action opts]
-                                     :else (choice {:on-success next-step
-                                                    :on-failure ::end
-                                                    :opts opts})))})]
-    (->> (wf step-fns {::action action
-                       ::bc/env (or env :shell)
-                       ::aero/config config
-                       ::aero/module module
-                       ::aero/profile profile})
+        env (or env :shell)]
+    (->> (run-tofu step-fns {::action action
+                             ::bc/env (or env :shell)
+                             ::aero/config config
+                             ::aero/module module
+                             ::aero/profile profile})
          (into (sorted-map)))))
 
 (comment
   (require '[user :refer [debug-atom]])
-  (main {:args [:clean :alpha :dev]
+  (main {:args [:ci :alpha :dev]
          :config "big-infra/big-config.edn"
-         :step-fns [tap-step-fn
+         :step-fns [log-step-fn
+                    tap-step-fn
                     print-step-fn
                     (block-destroy-prod-step-fn ::start)
                     (->exit-step-fn ::end)]
