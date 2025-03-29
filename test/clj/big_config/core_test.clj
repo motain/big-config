@@ -5,4 +5,6 @@
 
 (deftest ->step-fn-test
   (is (thrown? IllegalArgumentException
-               (->step-fn {}))))
+               (->step-fn {})))
+  (is (thrown? IllegalArgumentException
+               (->step-fn {:after :same}))))

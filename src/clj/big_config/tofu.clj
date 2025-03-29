@@ -12,20 +12,12 @@
    [bling.core :refer [bling]]
    [clojure.pprint :as pp]
    [clojure.string :as str]
-   [selmer.parser :refer [<<]]
+   [selmer.parser :as p]
    [selmer.util :as util]))
 
-#_{:clj-kondo/ignore [:unused-binding]}
 (def print-step-fn
-  (->step-fn {:before-f (fn [step {:keys [::action
-                                          ::aero/module
-                                          ::aero/profile
-                                          ::lock/owner
-                                          ::run/dir
-                                          ::run/cmds
-                                          ::call/fns
-                                          ::bc/err
-                                          ::bc/exit]}]
+  (->step-fn {:before-f (fn [step {:keys [::bc/err
+                                          ::bc/exit] :as opts}]
                           (binding [util/*escape-variables* false]
                             (let [[lock-start-step] (lock/lock)
                                   [unlock-start-step] (unlock/unlock-any)
@@ -33,36 +25,35 @@
                                   [prefix color] (if (= exit 0)
                                                    ["\ueabc" :green.bold]
                                                    ["\uf05c" :red.bold])
-                                  fn-desc (:desc (first fns))
                                   msg (cond
-                                        (= step ::read-module) (<< "Action {{ action }} | Module {{ module }} | Profile {{ profile }}")
-                                        (= step ::mkdir) (<< "Making dir {{ dir }}")
-                                        (= step lock-start-step) (<< "Lock (owner {{ owner }})")
-                                        (= step unlock-start-step) (<< "Unlock any")
-                                        (= step check-start-step) (<< "Checking if the working directory is clean")
-                                        (= step ::compile-tf) (<< "Compiling {{ dir }}/main.tf.json")
-                                        (= step ::run/run-cmd) (<< "Running:\n> {{ cmds | first }}")
-                                        (= step ::call/call-fn) (str "Calling fn: {{ fn-desc }}")
-                                        (= step ::push) (<< "Pushing last commit")
+                                        (= step ::read-module) (p/render "Action {{ big-config..tofu/action }} | Module {{ big-config..aero/module }} | Profile {{ big-config..aero/profile }}" opts)
+                                        (= step ::mkdir) (p/render "Making dir {{ big-config..run/dir }}" opts)
+                                        (= step lock-start-step) (p/render "Lock (owner {{ big-config..lock/owner }})" opts)
+                                        (= step unlock-start-step) "Unlock any"
+                                        (= step check-start-step) "Checking if the working directory is clean"
+                                        (= step ::compile-tf) (p/render "Compiling {{ big-config..run/dir }}/main.tf.json" opts)
+                                        (= step ::run/run-cmd) (p/render "Running:\n> {{ big-config..run/cmds | first}}" opts)
+                                        (= step ::call/call-fn) (p/render "Calling fn: {{ desc }}" (first (::call/fns opts)))
+                                        (= step ::push) "Pushing last commit"
                                         (and (= step ::end)
                                              (> exit 0)
                                              (string? err)
-                                             (not (str/blank? err))) (<< "{{ err }}")
+                                             (not (str/blank? err))) err
                                         :else nil)]
                               (when msg
                                 (binding [*out* *err*]
-                                  (println (bling [color (<< (str "{{ prefix }} " msg))])))))))
-              :after-f (fn [step {:keys [::run/cmds ::bc/err ::bc/exit]}]
+                                  (println (bling [color (p/render (str "{{ prefix }} " msg) {:prefix prefix})])))))))
+              :after-f (fn [step {:keys [::bc/exit] :as opts}]
                          (let [[_ check-end-step] (git/check)
                                prefix "\uf05c"
                                msg (cond
-                                     (= step check-end-step) (<< "Working directory is NOT clean")
-                                     (= step ::run/run-cmd) (<< "Failed running:\n> {{ cmds | first }}")
+                                     (= step check-end-step) "Working directory is NOT clean"
+                                     (= step ::run/run-cmd) (p/render "Failed running:\n> {{ big-config..run/cmds | first }}" opts)
                                      :else nil)]
                            (when (and msg
                                       (> exit 0))
                              (binding [*out* *err*]
-                               (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))))}))
+                               (println (bling [:red.bold (p/render (str "{{ prefix }} " msg) {:prefix prefix})]))))))}))
 
 (defn mkdir [{:keys [::run/dir] :as opts}]
   (generic-cmd opts (format "mkdir -p %s" dir)))
@@ -93,11 +84,11 @@
       (wf step-fns opts))))
 
 (defn run-action [step-fns {:keys [::action] :as opts}]
-  (let [opts (case action
-               :clean (assoc opts ::run/cmds ["rm -rf .terraform"])
-               (:opts :lock :unlock-any) opts
-               (:init :plan :apply :destroy) (merge opts {::run/cmds [(format "tofu %s" (name action))]})
-               :ci (merge opts {::run/cmds ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]}))]
+  (let [opts (assoc opts ::run/cmds (case action
+                                      :clean ["rm -rf .terraform"]
+                                      (:opts :lock :unlock-any) []
+                                      (:init :plan :apply :destroy) [(format "tofu %s" (name action))]
+                                      :ci ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]))]
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
                 (ok opts))
@@ -107,13 +98,13 @@
       (:init :plan) (run/run-cmds step-fns opts)
       (:apply :destroy :ci) (lock-action action step-fns opts))))
 
-#_{:clj-kondo/ignore [:unused-binding]}
 (defn block-destroy-prod-step-fn [start-step]
-  (->step-fn {:before-f (fn [step {:keys [::action ::aero/module ::aero/profile] :as opts}]
-                          (when (and (= step start-step)
-                                     (#{:destroy :ci} action)
-                                     (#{:prod :production} profile))
-                            (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))))}))
+  (->step-fn {:before-f (fn [step {:keys [::action ::aero/profile] :as opts}]
+                          (let [msg (p/render "You cannot destroy module {{ big-config..aero/module }} in {{ big-config..aero/profile }}" opts)]
+                            (when (and (= step start-step)
+                                       (#{:destroy :ci} action)
+                                       (#{:prod :production} profile))
+                              (throw (ex-info msg opts)))))}))
 
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
