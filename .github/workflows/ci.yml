@@ -37,6 +37,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - uses: taiki-e/install-action@just
+
       - name: Prepare java
         uses: actions/setup-java@v4
         with:
@@ -67,9 +69,7 @@ jobs:
         env:
           ZELLIJ_SESSION_NAME: test-${{ matrix.os }}-temurin-${{ matrix.java-version }}
         run: |
-          clojure -M:test
-
-      - uses: taiki-e/install-action@just
+          just test
 
       - name: Run big-config tests
         run: |
