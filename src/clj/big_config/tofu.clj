@@ -26,7 +26,7 @@
                                                    ["\ueabc" :green.bold]
                                                    ["\uf05c" :red.bold])
                                   msg (cond
-                                        (= step ::read-module) (p/render "Action {{ big-config..tofu/action }} | Module {{ big-config..aero/module }} | Profile {{ big-config..aero/profile }}" opts)
+                                        (= step ::read-module) (p/render "Action {{ big-config..tofu/action|default:nil }} | Module {{ big-config..aero/module|default:nil }} | Profile {{ big-config..aero/profile|default:nil }} | Config {{ big-config..tofu/config|default:nil }}" opts)
                                         (= step ::mkdir) (p/render "Making dir {{ big-config..run/dir }}" opts)
                                         (= step lock-start-step) (p/render "Lock (owner {{ big-config..lock/owner }})" opts)
                                         (= step unlock-start-step) "Unlock any"

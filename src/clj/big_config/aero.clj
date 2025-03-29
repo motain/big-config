@@ -5,7 +5,7 @@
    [big-config.utils :refer [deep-merge]]
    [clojure.string :as str]
    [clojure.walk :as walk]
-   [selmer.parser :refer [<<]]))
+   [selmer.parser :as p]))
 
 (defn ready?
   "All elements resolves to a string"
@@ -40,12 +40,12 @@
   [{:keys [::config ::module ::profile] :as opts}]
   (when (some nil? [config module profile])
     (throw (ex-info "Either config, module, or profile are nil" opts)))
-  #_{:clj-kondo/ignore [:unused-binding]}
   (let [config-name (str config)
+        msg (p/render "Module {{ big-config..aero/module }} does not exist in config {{ config | str }}" opts)
         config (-> (aero/read-config config {:profile (or profile :default)})
                    module)]
     (when (nil? config)
-      (throw (ex-info (<< "Module {{ module }} does not exist in config {{ config-name }}") {})))
+      (throw (ex-info msg {})))
     (loop [config (deep-merge config opts)
            done (atom true)
            iteration 0]
