@@ -73,6 +73,9 @@
                next-opts))))))))
 
 (defn ->step-fn [{:keys [before-f after-f]}]
+  (cond
+    (every? nil? [before-f after-f]) (throw (IllegalArgumentException. "At least one f needs to be provided"))
+    (= [nil :same] [before-f after-f]) (throw (IllegalArgumentException. ":before-f must be a f with :after-f :same")))
   (fn [f step opts]
     (when before-f
       (before-f step opts))
