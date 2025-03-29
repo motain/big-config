@@ -16,5 +16,5 @@
 (defn ->exit-step-fn [end]
   (->step-fn {:after-f (fn [step {:keys [::bc/env ::bc/exit]}]
                          (when (and (= step end)
-                                    (= env :shell))
+                                    (not= env :repl))
                            (exit-with-code exit)))}))

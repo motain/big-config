@@ -3,7 +3,7 @@
    [big-config :as bc]
    [big-config.aero :as aero]
    [big-config.call :as call]
-   [big-config.core :refer [->step-fn ->workflow choice]]
+   [big-config.core :refer [->step-fn ->workflow choice ok]]
    [big-config.git :as git]
    [big-config.lock :as lock]
    [big-config.run :as run :refer [generic-cmd]]
@@ -14,10 +14,6 @@
    [clojure.string :as str]
    [selmer.parser :refer [<<]]
    [selmer.util :as util]))
-
-(defn ok [opts]
-  (merge opts {::bc/exit 0
-               ::bc/err nil}))
 
 #_{:clj-kondo/ignore [:unused-binding]}
 (def print-step-fn
@@ -68,46 +64,48 @@
                              (binding [*out* *err*]
                                (println (bling [:red.bold (<< (str "{{ prefix }} " msg))]))))))}))
 
-(defn action->opts [{:keys [::action] :as opts}]
-  (-> (case action
-        (:clean :opts :lock :unlock-any) opts
-        (:init :plan :apply :destroy) (merge opts {::run/cmds [(format "tofu %s" (name action))]})
-        :ci (merge opts {::run/cmds ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]}))
-      ok))
-
 (defn mkdir [{:keys [::run/dir] :as opts}]
   (generic-cmd opts (format "mkdir -p %s" dir)))
 
 (defn git-push [opts]
   (generic-cmd opts "git push"))
 
+(def lock-action
+  (fn [action step-fns opts]
+    (let [wf (->workflow {:first-step ::check
+                          :last-step ::action-end
+                          :wire-fn (fn [step step-fns]
+                                     (case step
+                                       ::check [(partial git/check step-fns) ::lock]
+                                       ::lock [(partial lock/lock step-fns) ::run-cmds]
+                                       ::run-cmds [(partial run/run-cmds step-fns) ::push]
+                                       ::push [git-push ::unlock]
+                                       ::unlock [(partial unlock/unlock-any step-fns) ::action-end]
+                                       ::action-end [identity]))
+                          :next-fn (fn [step next-step opts]
+                                     (cond
+                                       (= step ::action-end) [nil opts]
+                                       (and (= step ::run-cmds)
+                                            (= action :ci)) [::unlock opts]
+                                       :else (choice {:on-success next-step
+                                                      :on-failure ::action-end
+                                                      :opts opts})))})]
+      (wf step-fns opts))))
+
 (defn run-action [step-fns {:keys [::action] :as opts}]
-  (let [wf (->workflow {:first-step ::check
-                        :last-step ::action-end
-                        :wire-fn (fn [step step-fns]
-                                   (case step
-                                     ::check [(partial git/check step-fns) ::lock]
-                                     ::lock [(partial lock/lock step-fns) ::run-cmds]
-                                     ::run-cmds [(partial run/run-cmds step-fns) ::push]
-                                     ::push [git-push ::unlock]
-                                     ::unlock [(partial unlock/unlock-any step-fns) ::action-end]
-                                     ::action-end [identity]))
-                        :next-fn (fn [step next-step opts]
-                                   (cond
-                                     (= step ::action-end) [nil opts]
-                                     (and (= step ::run-cmds)
-                                          (= action :ci)) [::unlock opts]
-                                     :else (choice {:on-success next-step
-                                                    :on-failure ::action-end
-                                                    :opts opts})))})]
+  (let [opts (case action
+               :clean (assoc opts ::run/cmds ["rm -rf .terraform"])
+               (:opts :lock :unlock-any) opts
+               (:init :plan :apply :destroy) (merge opts {::run/cmds [(format "tofu %s" (name action))]})
+               :ci (merge opts {::run/cmds ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]}))]
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
                 (ok opts))
-      :clean (run/run-cmds step-fns (assoc opts ::run/cmds ["rm -rf .terraform"]))
+      :clean (run/run-cmds step-fns opts)
       :lock (lock/lock step-fns opts)
       :unlock-any (unlock/unlock-any step-fns opts)
       (:init :plan) (run/run-cmds step-fns opts)
-      (:apply :destroy :ci) (wf step-fns opts))))
+      (:apply :destroy :ci) (lock-action action step-fns opts))))
 
 #_{:clj-kondo/ignore [:unused-binding]}
 (defn block-destroy-prod-step-fn [start-step]
@@ -131,7 +129,7 @@
         wf (->workflow {:first-step ::start
                         :wire-fn (fn [step step-fns]
                                    (case step
-                                     ::start [action->opts ::read-module]
+                                     ::start [#(ok %) ::read-module]
                                      ::read-module [aero/read-module ::mkdir]
                                      ::mkdir [mkdir ::call-fns]
                                      ::call-fns [(partial call/call-fns step-fns) ::run-action]

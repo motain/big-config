@@ -21,3 +21,9 @@ tofu action module profile:
     (require '[big-config.tofu :refer [main]])
     (main {:args [:{{ action }} :{{ module }} :{{ profile }}]
            :config "big-infra/big-config.edn"})
+
+[group('private')]
+test-wf-exit:
+    #!/usr/bin/env -S bb --config big-infra/bb.edn -cp src/clj:test/clj
+    (require '[big-config.step-fns-test :refer [wf-exit]])
+    (wf-exit)
