@@ -1,11 +1,12 @@
 (ns tofu.alpha.user-data
   (:require
    [clojure.java.io :as io]
-   [selmer.parser :refer [<<]]))
+   [selmer.parser :as p]))
 
 (def text "Hello world!")
 
 (defn ^:export invoke []
-  #_{:clj-kondo/ignore [:unused-binding]}
-  (let [text text]
-    (<< (slurp (io/resource "user_data.sh")))))
+  (-> "user_data.sh"
+      io/resource
+      slurp
+      (p/render {:text text})))
