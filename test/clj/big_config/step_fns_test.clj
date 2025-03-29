@@ -32,7 +32,7 @@
           proc (process/shell {:continue true
                                :out :string
                                :err :string} "just test-wf-exit")
-          {:keys [:exit :out]} proc
+          {:keys [exit out]} proc
           expect [exit out]]
 
       (is (= expect actual)))))

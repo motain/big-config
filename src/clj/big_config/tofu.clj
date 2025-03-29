@@ -109,11 +109,11 @@
 
 #_{:clj-kondo/ignore [:unused-binding]}
 (defn block-destroy-prod-step-fn [start-step]
-  (->step-fn {:before-fn (fn [step {:keys [::action ::aero/module ::aero/profile] :as opts}]
-                           (when (and (= step start-step)
-                                      (#{:destroy :ci} action)
-                                      (#{:prod :production} profile))
-                             (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))))}))
+  (->step-fn {:before-f (fn [step {:keys [::action ::aero/module ::aero/profile] :as opts}]
+                          (when (and (= step start-step)
+                                     (#{:destroy :ci} action)
+                                     (#{:prod :production} profile))
+                            (throw (ex-info (<< "You cannot destroy the module {{ module }} in {{ profile }}") opts))))}))
 
 (defn ^:export main [{[action module profile] :args
                       step-fns :step-fns
