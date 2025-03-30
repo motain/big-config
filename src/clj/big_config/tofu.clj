@@ -12,6 +12,7 @@
    [big-config.unlock :as unlock]
    [bling.core :refer [bling]]
    [clojure.pprint :as pp]
+   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [selmer.parser :as p]
    [selmer.util :as util]))
@@ -27,7 +28,7 @@
                                                    ["\ueabc" :green.bold]
                                                    ["\uf05c" :red.bold])
                                   msg (cond
-                                        (= step ::read-module) (p/render "Action {{ big-config..tofu/action|default:nil }} | Module {{ big-config..aero/module|default:nil }} | Profile {{ big-config..aero/profile|default:nil }} | Config {{ big-config..tofu/config|default:nil }}" opts)
+                                        (= step ::read-module) (p/render "Action {{ big-config..tofu/action|default:nil }} | Module {{ big-config..aero/module|default:nil }} | Profile {{ big-config..aero/profile|default:nil }} | Config {{ big-config..aero/config|default:nil }}" opts)
                                         (= step ::mkdir) (p/render "Making dir {{ big-config..run/dir }}" opts)
                                         (= step lock-start-step) (p/render "Lock (owner {{ big-config..lock/owner }})" opts)
                                         (= step unlock-start-step) "Unlock any"
@@ -83,12 +84,47 @@
                                        (#{:prod :production} profile))
                               (throw (ex-info msg opts)))))}))
 
+(s/def ::bc/env keyword?)
+(s/def ::call/f string?)
+(s/def ::call/desc string?)
+(s/def ::call/args (s/coll-of any?))
+(s/def ::call/fn (s/keys :req-un [::call/f ::call/desc ::call/args]))
+(s/def ::call/fns (s/coll-of ::call/fn))
+(s/def ::lock/lock-keys (s/coll-of keyword?))
+(s/def ::lock/owner string?)
+(s/def ::run/dir string?)
+(s/def ::run/shell-opts (s/map-of keyword? any?))
+(s/def ::aws-account-id string?)
+(s/def ::region string?)
+(s/def ::opts (s/keys :req [::bc/env
+                            ::call/fns
+                            ::lock/lock-keys
+                            ::lock/owner
+                            ::run/dir
+                            ::run/shell-opts
+                            ::aws-account-id
+                            ::region]))
+
+(defn spec->msg [spec opts]
+  (let [msg (s/explain-str spec opts)
+        start-index (str/index-of msg "failed:")]
+    (if start-index
+      (subs msg start-index)
+      (p/render "Validation error in config {{ big-config..aero/config }}" opts))))
+
+(defn validate [spec opts]
+  (let [parsed-opts (s/conform spec opts)]
+    (if (s/invalid? parsed-opts)
+      (throw (ex-info (spec->msg spec opts) opts))
+      parsed-opts)))
+
 (def run-tofu
   (->workflow {:first-step ::start
                :wire-fn (fn [step step-fns]
                           (case step
                             ::start [ok ::read-module]
-                            ::read-module [aero/read-module ::mkdir]
+                            ::read-module [aero/read-module ::validate]
+                            ::validate [(partial validate ::opts) ::mkdir]
                             ::mkdir [mkdir ::call-fns]
                             ::call-fns [(partial call/call-fns step-fns) ::run-action]
                             ::run-action [(partial run-action step-fns) ::end]
@@ -135,3 +171,4 @@
 
   (reset! debug-atom [])
   (-> debug-atom))
+
