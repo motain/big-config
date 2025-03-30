@@ -40,8 +40,7 @@
   [{:keys [::config ::module ::profile] :as opts}]
   (when (some nil? [config module profile])
     (throw (ex-info "Either config, module, or profile are nil" opts)))
-  (let [config-name (str config)
-        msg (p/render "Module {{ big-config..aero/module }} does not exist in config {{ config | str }}" opts)
+  (let [msg (p/render "Module {{ big-config..aero/module }} does not exist in config {{ big-config..aero/config | str }}" opts)
         config (-> (aero/read-config config {:profile (or profile :default)})
                    module)]
     (when (nil? config)
