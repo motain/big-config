@@ -1,6 +1,7 @@
 set export
 
 AWS_PROFILE := "251213589273"
+AWS_ACCOUNT_ID := AWS_PROFILE
 
 # list of all recipes
 help:
