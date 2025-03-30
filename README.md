@@ -1,3 +1,5 @@
+![screenshot](https://raw.githubusercontent.com/amiorin/big-config/main/screenshot.png)
+
 # Intro
 How to avoid incidents like the one described in [Tale of 'metadpata': the revenge of the supertools](https://engineering.zalando.com/posts/2024/01/tale-of-metadpata-the-revenge-of-the-supertools.html) 
 
