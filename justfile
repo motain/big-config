@@ -18,6 +18,11 @@ test:
 get-caller-identity:
     aws sts get-caller-identity
 
+# crate bucket for tofu states
+[group('tofu')]
+create-bucket account region:
+    aws s3 mb s3://tf-state-{{ account }}-{{ region }}
+
 # tofu opts|init|plan|apply|destroy|lock|unlock-any
 [group('tofu')]
 tofu action module profile:

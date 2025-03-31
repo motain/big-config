@@ -25,7 +25,13 @@ At the moment, it can be used to replace `atlantis` and `cdk`.
 Star, fork and clone the repository. Run `just` overriding `AWS_ACCOUNT_ID` and `AWS_PROFILE`. The `AWS_ASSUME_ROLE` is optional.
 
 ``` shell
-just AWS_PROFILE=aaaaaaaaaaaa AWS_ACCOUNT_ID=111111111111 AWS_ASSUME_ROLE=arn:aws:iam::111111111111:role/aaaaaaaaaaaa tofu ci alpha dev
+# crate the bucket for tofu states
+just create-bucket 111111111111 eu-west-1
+# run ci for module alpha in dev
+just AWS_PROFILE=aaaaaaaaaaaa \
+     AWS_ACCOUNT_ID=111111111111 \
+     AWS_ASSUME_ROLE=arn:aws:iam::111111111111:role/aaaaaaaaaaaa \
+     tofu ci alpha dev
 ```
 
 ![screenshot](https://raw.githubusercontent.com/amiorin/big-config/main/just.png)
