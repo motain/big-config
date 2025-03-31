@@ -22,10 +22,10 @@ At the moment, it can be used to replace `atlantis` and `cdk`.
 * Compared to `cdk`, `big-config` supports only `clojure` and `tofu`. The problem of generating `json` files should not be blown out of proportion.
 
 ## Install
-Star, fork and clone the repository. Run `just` overriding `AWS_ACCOUNT_ID` and `AWS_PROFILE`.
+Star, fork and clone the repository. Run `just` overriding `AWS_ACCOUNT_ID` and `AWS_PROFILE`. The `AWS_ASSUME_ROLE` is optional.
 
 ``` shell
-just AWS_PROFILE=abc AWS_ACCOUNT_ID=123 tofu ci alpha dev
+just AWS_PROFILE=aaaaaaaaaaaa AWS_ACCOUNT_ID=111111111111 AWS_ASSUME_ROLE=arn:aws:iam::111111111111:role/aaaaaaaaaaaa tofu ci alpha dev
 ```
 
 ![screenshot](https://raw.githubusercontent.com/amiorin/big-config/main/just.png)
