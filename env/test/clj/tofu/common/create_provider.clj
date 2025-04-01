@@ -1,8 +1,11 @@
-(ns tofu.common.create-provider)
+(ns tofu.common.create-provider
+  (:require
+   [clojure.string :as str]))
 
 (defn invoke [{:keys [region bucket module assume-role]}]
   (let [key (str (name module) ".tfstate")
-        assume-role (when assume-role
+        assume-role (when (and assume-role
+                               (not (str/blank? assume-role)))
                       {:assume_role {:role_arn assume-role}})]
     {:provider {:aws [(merge {:region region}
                              assume-role)]}

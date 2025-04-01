@@ -23,7 +23,7 @@ get-caller-identity:
 create-bucket account region:
     aws s3 mb s3://tf-state-{{ account }}-{{ region }}
 
-# tofu opts|init|plan|apply|destroy|lock|unlock-any
+# tofu opts|init|plan|apply|destroy|lock|unlock-any|ci|reset
 [group('tofu')]
 tofu action module profile:
     #!/usr/bin/env -S bb --config big-infra/bb.edn

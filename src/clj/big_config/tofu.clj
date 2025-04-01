@@ -65,6 +65,7 @@
                                       :clean ["rm -rf .terraform"]
                                       (:opts :lock :unlock-any) []
                                       (:init :plan :apply :destroy) [(format "tofu %s" (name action))]
+                                      :reset ["rm -rf .terraform" "tofu init" "tofu plan"]
                                       :ci ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]))]
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
@@ -73,7 +74,7 @@
                :clean run/run-cmds
                :lock lock/lock
                :unlock-any unlock/unlock-any
-               (:init :plan) run/run-cmds
+               (:init :plan :reset) run/run-cmds
                (:apply :destroy :ci) (partial action/run-action-with-lock action)) [step-fns opts]))))
 
 (defn block-destroy-prod-step-fn [start-step]
@@ -160,7 +161,7 @@
 
 (comment
   (require '[user :refer [debug-atom]])
-  (main {:args [:ci :alpha :dev]
+  (main {:args [:reset :alpha :dev]
          :config "big-infra/big-config.edn"
          :step-fns [log-step-fn
                     tap-step-fn
