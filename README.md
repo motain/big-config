@@ -172,7 +172,7 @@ The design of `big-config` requires using `qualified keywords` in the map shared
 ```
 
 ## Errors instead of exceptions
-Errors are implemented like exit code in the shell. 0 for success and anything else for failure. The last step success or failure is stored in the `opts` and the `choise` function uses it to decide the `next-step`. Exception are converted to Errors.
+Errors are implemented like exit code in the shell. 0 for success and anything else for failure. The last step success or failure is stored in the `opts` and the `choice` function uses it to decide the `next-step`. Exception are converted to Errors.
 
 ``` clojure
 (defn ok [opts]
