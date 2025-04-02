@@ -40,5 +40,8 @@
  :default-prod #merge [#ref [:default]
                        {:big-config.tofu/aws-account-id #or [#env AWS_ACCOUNT_ID "251213589273"]}]
 
- :alpha #profile {:dev #ref [:default-dev]
-                  :prod #ref [:default-prod]}}
+ #module :alpha #profile {:dev #ref [:default-dev]
+                          :prod #ref [:default-prod]}
+
+ #module :beta #profile {:dev #ref [:default-dev]
+                         :prod #ref [:default-prod]}}

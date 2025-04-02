@@ -1,2 +1,2 @@
 {:paths ["src" "resources"]
- :deps {amiorin/big-config {:local/root ".."}}}
+ :deps {amiorin/big-config {:local/root "."}}}

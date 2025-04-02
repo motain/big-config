@@ -8,10 +8,18 @@ AWS_ASSUME_ROLE := ""
 help:
     @just -f {{ justfile() }} --list --unsorted
 
+# test all
+test: test-big-infra test-big-config
+
 # test big-config
 [group('clojure')]
-test:
+test-big-config:
     clojure -M:test
+
+# test big-infra
+[group('tofu')]
+test-big-infra:
+    cd big-infra && clojure -M:test
 
 # check the AWS identity
 [group('tofu')]
@@ -28,6 +36,7 @@ create-bucket account region:
 tofu action module profile:
     #!/usr/bin/env -S bb --config big-infra/bb.edn
     (require '[big-config.tofu :refer [main]])
+    (require '[tofu.aero-readers])
     (main {:args [:{{ action }} :{{ module }} :{{ profile }}]
            :config "big-infra/big-config.edn"})
 
