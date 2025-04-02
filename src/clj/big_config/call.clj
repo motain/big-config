@@ -2,8 +2,10 @@
   (:require
    [babashka.fs :as fs]
    [big-config :as bc]
+   [big-config.aero :as aero]
    [big-config.core :refer [->workflow]]
-   [cheshire.core :as json]))
+   [cheshire.core :as json]
+   [clojure.walk :as walk]))
 
 (defn call-fn [{:keys [::fns] :as opts}]
   (let [{:keys [f args]} (first fns)]
@@ -44,6 +46,44 @@
               :text res
               :json (json/generate-string res {:pretty true}))]
     (spit out res)))
+
+(defn ^:export stability
+  "Use this function in your tests to make sure that your code is always
+  producing the same configuration files. The configurations files must be
+  committed."
+  [opts module]
+  (let [{:keys [::bc/exit] :as opts} (aero/read-module opts)
+        _ (when (> exit 0)  (throw (ex-info "Failed to read the edn file" opts)))
+        files (-> opts
+                  ::fns
+                  (->> (filter #(= (:f %) "big-config.call/mkdir-and-spit"))
+                       (map #(-> % :args first :out))))
+        files-v1 (mapv #(slurp %) files)
+        {:keys [::bc/exit]} (call-fns opts)
+        _ (when (> exit 0)  (throw (ex-info "Failed to call-fns" opts)))
+        files-v2 (mapv #(slurp %) files)
+        _ (when-not (= files-v1 files-v2) (throw (ex-info (format "Module %s has changed" module) opts)))]))
+
+(defn ^:export catch-nils
+  "Use this function in your tests to make sure that your code is not generating
+  nils. The configurations files must be committed."
+  [opts module]
+  (let [{:keys [::bc/exit] :as opts} (aero/read-module opts)
+        _ (when (> exit 0)  (throw (ex-info "Failed to read the edn file" opts)))
+        xs (-> opts
+               ::fns
+               (->> (filter #(= (:f %) "big-config.call/mkdir-and-spit"))
+                    (filter #(-> % :args first :type (= :json)))
+                    (map #(-> % :args first))))]
+    (doall
+     (for [x xs]
+       (let [{:keys [f args]} x
+             f (-> f symbol requiring-resolve)]
+         (->> (apply f args)
+              (walk/prewalk
+               #(if (nil? %)
+                  (throw (ex-info (format "nil value found in module %s" module) opts))
+                  %))))))))
 
 (comment
   (call-fns [(fn [f step opts]

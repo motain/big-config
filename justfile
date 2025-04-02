@@ -11,6 +11,13 @@ help:
 # test all
 test: test-big-infra test-big-config
 
+# format and clean-ns all
+tidy:
+    clojure-lsp clean-ns
+    cd big-infra && clojure-lsp clean-ns
+    clojure-lsp format
+    cd big-infra && clojure-lsp format
+
 # test big-config
 [group('clojure')]
 test-big-config:
