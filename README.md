@@ -18,7 +18,7 @@ At the moment, it can be used to replace `atlantis` and `cdk`.
 * Unlock module `alpha` for profile `dev`.
 
 ### Advantages
-* Compared to `atlantis`, `big-config` enables a faster `inner loop`. Only two accounts are needed, `prod` and `dev`. The `lock` workflow enables developers and CI to share the same AWS account for development and integration.
+* Compared to `atlantis`, `big-config` enables a faster `inner loop`. Only two accounts are needed, `prod` and `dev`. The `lock` workflow enables developers and CI to share the same AWS account for development and integration. Refactoring the code that generates the configuration files is trivial because of the test for catching `nils` in `json` files and because of the test for comparing the previous version for any files with the new version. 
 * Compared to `cdk`, `big-config` supports only `clojure` and `tofu`. The problem of generating `json` files should not be blown out of proportion.
 
 ## Install
