@@ -60,12 +60,16 @@
       ([opts]
        (workflow (or step-fns []) opts))
       ([step-fns opts]
+       (when (nil? opts)
+         (throw (IllegalArgumentException. "ops should never be nil")))
        (let [step-fns (resolve-step-fns step-fns)]
          (loop [step first-step
                 opts opts]
            (let [[f next-step] (wire-fn step step-fns)
                  f (compose step-fns f)
                  opts (try-f f step opts)
+                 _ (when (nil? opts)
+                     (throw (ex-info "ops should never be nil" {:step step})))
                  next-fn (resolve-next-fn next-fn last-step)
                  [next-step next-opts] (next-fn step next-step opts)]
              (if next-step
@@ -87,4 +91,12 @@
       (after-f step opts)
       opts)))
 
-(comment)
+(comment
+  (let [wf (->workflow {:first-step ::start
+                        :wire-fn (fn [step _]
+                                   (case step
+                                     ::start [(fn [opts]
+                                                (println "foo")
+                                                opts) ::end]
+                                     ::end [identity]))})]
+    (wf {})))
