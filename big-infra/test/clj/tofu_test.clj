@@ -37,4 +37,5 @@
                               "tofu/"
                               :big-config.tofu/aws-account-id "/"
                               :big-config.aero/module]}]
-         (call/catch-nils opts module))))))
+         (call/catch-nils opts module)
+         (is true))))))

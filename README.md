@@ -18,7 +18,7 @@ At the moment, it can be used to replace `atlantis` and `cdk`.
 * Unlock module `alpha` for profile `dev`.
 
 ### Advantages
-* Compared to `atlantis`, `big-config` enables a faster `inner loop`. Only two accounts are needed, `prod` and `dev`. The `lock` workflow enables developers and CI to share the same AWS account for development and integration. Refactoring the code that generates the configuration files is trivial because of the test for catching `nils` in `json` files and because of the test for comparing the previous version for any files with the new version. 
+* Compared to `atlantis`, `big-config` enables a faster `inner loop`. Only two accounts are needed, `prod` and `dev`. The `lock` workflow enables developers and CI to share the same AWS account for development and integration. Refactoring the code that generates the configuration files is trivial because of the test for catching `nils` gg in `json` files and because of the test for comparing the previous version for any files with the new version. 
 * Compared to `cdk`, `big-config` supports only `clojure` and `tofu`. The problem of generating `json` files should not be blown out of proportion.
 
 ## Install
@@ -181,34 +181,50 @@ Errors are implemented like exit code in the shell. 0 for success and anything e
 ```
 
 ## Testability
-Declarative infrastructure like `tofu` and `k8s` make testing and refactoring trivial because after every change we can compare the previous output with the new output. This is a snippet that I use in an internal project to make sure that when I refactor the `clojure` code to create resources there are no regression bugs.
+Declarative infrastructure like `tofu` and `k8s` make testing and refactoring trivial. There are two functions (`stability` and `catch-nils`) ready to be used in your tests to catch bugs and nil values during refactoring. The `modules` are discovered dynamically using the tag `#module` in the `edn` config file.
 
 ``` clojure
-(deftest main-stability
-  (testing "checking if the main.tf.json files committed are equal to the test generated ones"
-    (doall (for [module  [:alpha
-                          :beta
-                          :gamma
-                          :delta]]
-             (let [opts {::aero/config "big-config.edn"
-                         ::aero/module module
-                         ::aero/profile :prod
-                         ::run/dir [:big-config.aero/join
-                                    "tofu/"
-                                    :big-config.tofu/aws-account-id "/"
-                                    :big-config.aero/module]}
-                   {:keys [::run/dir
-                           ::bc/err
-                           ::bc/exit] :as opts} (aero/read-module opts)
-                   _ (is (= [0 nil] [exit err]))
-                   f (str dir "/main.tf.json")
-                   v1 (slurp f)
-                   {:keys [::bc/err
-                           ::bc/exit]} (call/call-fns opts)
-                   _ (is (= [0 nil] [exit err]))
-                   v2 (slurp f)
-                   _ (is (= v1 v2))])))))
+(ns tofu-test
+  (:require
+   [aero.core :refer [read-config]]
+   [big-config.aero :as aero]
+   [big-config.call :as call]
+   [big-config.run :as run]
+   [clojure.test :refer [deftest is testing]]
+   [tofu.aero-readers :refer [modules]]))
 
+(defn dynamic-modules []
+  (reset! modules #{})
+  (read-config "big-config.edn")
+  @modules)
+
+(deftest main-stability-test
+  (testing "checking if all dynamic files committed are equal to the test generated ones"
+    (doall
+     (for [module (dynamic-modules)]
+       (let [opts {::aero/config "big-config.edn"
+                   ::aero/module module
+                   ::aero/profile :prod
+                   ::run/dir [:big-config.aero/join
+                              "tofu/"
+                              :big-config.tofu/aws-account-id "/"
+                              :big-config.aero/module]}]
+         (call/stability opts module)
+         (is true))))))
+
+(deftest catch-nils-test
+  (testing "checking that the map doesn't contain nils"
+    (doall
+     (for [module (dynamic-modules)]
+       (let [opts {::aero/config "big-config.edn"
+                   ::aero/module module
+                   ::aero/profile :prod
+                   ::run/dir [:big-config.aero/join
+                              "tofu/"
+                              :big-config.tofu/aws-account-id "/"
+                              :big-config.aero/module]}]
+         (call/catch-nils opts module)
+         (is true))))))
 ```
 
 ## Libraries instead of tools
