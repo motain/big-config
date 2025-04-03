@@ -67,9 +67,11 @@
                 opts opts]
            (let [[f next-step] (wire-fn step step-fns)
                  f (compose step-fns f)
-                 opts (try-f f step opts)
+                 {:keys [::bc/exit] :as opts} (try-f f step opts)
                  _ (when (nil? opts)
-                     (throw (ex-info "ops should never be nil" {:step step})))
+                     (throw (ex-info "ops must never be nil" {:step step})))
+                 _ (when-not (nat-int? exit)
+                     (throw (ex-info ":big-config/exit must be a natural number" opts)))
                  next-fn (resolve-next-fn next-fn last-step)
                  [next-step next-opts] (next-fn step next-step opts)]
              (if next-step
@@ -93,10 +95,11 @@
 
 (comment
   (let [wf (->workflow {:first-step ::start
+                        :step-fns ["big-config.step-fns/bling-step-fn"]
                         :wire-fn (fn [step _]
                                    (case step
                                      ::start [(fn [opts]
                                                 (println "foo")
-                                                opts) ::end]
+                                                (ok opts)) ::end]
                                      ::end [identity]))})]
     (wf {})))

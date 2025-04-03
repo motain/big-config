@@ -2,7 +2,7 @@
   (:require
    [babashka.process :as process]
    [big-config :as bc]
-   [big-config.core :refer [->workflow]]
+   [big-config.core :refer [->workflow ok]]
    [clojure.string :as str]))
 
 (def default-opts {:continue true
@@ -46,7 +46,9 @@
   (let [cmds (if (seq cmds)
                (conj (seq cmds) nil)
                [nil])]
-    (assoc opts ::cmds cmds)))
+    (-> opts
+        (assoc ::cmds cmds)
+        ok)))
 
 (def run-cmds
   (->workflow {:first-step ::start

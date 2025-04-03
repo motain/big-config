@@ -50,6 +50,22 @@ tofu action module profile:
 # invoked by recipe test
 [group('private')]
 test-wf-exit:
-    #!/usr/bin/env -S bb --config big-infra/bb.edn -cp src/clj:test/clj
+    #!/usr/bin/env -S bb --config big-infra/bb.edn
+    (require '[babashka.classpath :refer [add-classpath get-classpath]]
+             '[clojure.string :as str])
+    (add-classpath (str (System/getProperty "user.dir") "/test/clj"))
     (require '[big-config.step-fns-test :refer [wf-exit]])
     (wf-exit)
+
+
+# print babashka classpath
+[group('private')]
+bb-classpath:
+    #!/usr/bin/env -S bb --config big-infra/bb.edn
+    (require '[babashka.classpath :refer [add-classpath get-classpath]]
+             '[clojure.string :as str])
+    (add-classpath (str (System/getProperty "user.dir") "/test/clj"))
+    (-> (get-classpath)
+        (str/split #":")
+        sort
+        (->> (run! println)))
