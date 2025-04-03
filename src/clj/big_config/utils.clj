@@ -15,7 +15,7 @@
                    (for [[k v] m]
                      [k (cond
                           (map? v) (nested-sort-map v)
-                          (seq? v) (mapv nested-sort-map v)
+                          (or (vector? v) (seq? v)) (mapv nested-sort-map v)
                           :else v)]))
-    (seq? m) (mapv nested-sort-map m)
+    (or (vector? m) (seq? m)) (mapv nested-sort-map m)
     :else m))
