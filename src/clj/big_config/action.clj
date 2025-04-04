@@ -23,7 +23,7 @@
                                    (cond
                                      (= step ::end) [nil opts]
                                      (and (= step ::run-cmds)
-                                          (= action :ci)) [::unlock opts]
+                                          (#{:ci :auto-apply} action)) [::unlock opts]
                                      :else (choice {:on-success next-step
                                                     :on-failure ::end
                                                     :opts opts})))})]

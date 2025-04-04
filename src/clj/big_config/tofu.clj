@@ -66,6 +66,7 @@
                                       (:opts :lock :unlock-any) []
                                       (:init :plan :apply :destroy) [(format "tofu %s" (name action))]
                                       :reset ["rm -rf .terraform" "tofu init" "tofu plan"]
+                                      :auto-apply ["tofu init" "tofu apply -auto-approve"]
                                       :ci ["tofu init" "tofu apply -auto-approve" "tofu destroy -auto-approve"]))]
     (case action
       :opts (do (pp/pprint (into (sorted-map) opts))
@@ -75,7 +76,7 @@
                :lock lock/lock
                :unlock-any unlock/unlock-any
                (:init :plan :reset) run/run-cmds
-               (:apply :destroy :ci) (partial action/run-action-with-lock action)) [step-fns opts]))))
+               (:auto-apply :apply :destroy :ci) (partial action/run-action-with-lock action)) [step-fns opts]))))
 
 (defn block-destroy-prod-step-fn [start-step]
   (->step-fn {:before-f (fn [step {:keys [::action ::aero/profile] :as opts}]
